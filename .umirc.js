@@ -10,7 +10,9 @@ export default {
       dynamicImport: { webpackChunkName: true },
       title: 'loan-calculator',
       dll: false,
-      
+
+      outputPath: 'docs',
+      base: '/loan-calculator',
       routes: {
         exclude: [
           /models\//,
