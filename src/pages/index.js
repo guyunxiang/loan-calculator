@@ -20,6 +20,10 @@ class HomePage extends React.Component {
     totalInterest: '',      // 总利息
   }
 
+  componentDidMount() {
+    console.log('ok');
+  }
+
   // 提交表单
   handleSubmit = (e) => {
     e.preventDefault();
