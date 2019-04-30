@@ -17,6 +17,7 @@ class HomePage extends React.Component {
   state = {
     annualizedRate: '',     // 年化收益率
     tenThousandIncome: '',  // 万分收益
+    totalInterest: '',      // 总利息
   }
 
   // 提交表单
@@ -56,6 +57,7 @@ class HomePage extends React.Component {
     const annualizedRate = totalInterest / amount / totalDays * 365 * 100;
     this.setState({
       annualizedRate: annualizedRate.toFixed(2),
+      totalInterest,
     });
   }
 
@@ -70,6 +72,7 @@ class HomePage extends React.Component {
     const dateBasicAmount = amount / date;
     // 每期利息
     const dateInterest = dateAmount - dateBasicAmount;
+    console.log(dateInterest);
     // 计算一年总利息
     let yearTotalInterest = 0;
     if (dateType === 'year') {
@@ -88,7 +91,7 @@ class HomePage extends React.Component {
 
   render () {
 
-    const { annualizedRate, tenThousandIncome } = this.state;
+    const { annualizedRate, tenThousandIncome, totalInterest } = this.state;
 
     const formItemLayout = {
       labelCol: {
@@ -195,6 +198,11 @@ class HomePage extends React.Component {
           </Form.Item>
         </Form>
         <div style={{ textAlign: 'left' }}>
+          {
+            totalInterest ? (
+              <h4>总利息：<span>{totalInterest.toFixed(2)}</span></h4>
+            ) : null
+          }
           {
             annualizedRate ? (
               <h4>年化收益率：<span>{annualizedRate}%</span></h4>
