@@ -2,6 +2,9 @@
 // ref: https://umijs.org/config/
 export default {
   treeShaking: true,
+  outputPath: 'docs',
+  publicPath: '/loan-calculator/',
+
   plugins: [
     // ref: https://umijs.org/plugin/umi-plugin-react.html
     ['umi-plugin-react', {
@@ -11,9 +14,6 @@ export default {
       title: 'loan-calculator',
       dll: false,
 
-      outputPath: 'docs',
-      base: '/loan-calculator',
-      publicPath: '/loan-calculator',
       routes: {
         exclude: [
           /models\//,
