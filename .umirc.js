@@ -13,6 +13,7 @@ export default {
 
       outputPath: 'docs',
       base: '/loan-calculator',
+      publicPath: '/loan-calculator',
       routes: {
         exclude: [
           /models\//,
