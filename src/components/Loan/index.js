@@ -40,12 +40,7 @@ class Loan extends React.Component {
   }
 
   // 渲染等额本息计算结果
-  renderTabPan1() {
-    const {
-      amount,
-      date,
-      rate,
-    } = this.state;
+  renderTabPan1(amount, date, rate) {
     // 总月数
     let monthNums = new BigNumber(0);
     // 每月还款本金
@@ -93,12 +88,7 @@ class Loan extends React.Component {
   }
 
   // 渲染等额本金计算结果
-  renderTabPan2() {
-    const {
-      amount,
-      date,
-      rate,
-    } = this.state;
+  renderTabPan2(amount, date, rate) {
     // 总月数
     let monthNums = new BigNumber(0);
     // 每月还款本金
@@ -211,6 +201,11 @@ class Loan extends React.Component {
     const {
       getFieldDecorator
     } = this.props.form;
+    const {
+      amount,
+      date,
+      rate,
+    } = this.state;
     return (
       <div>
         <Form
@@ -281,10 +276,10 @@ class Loan extends React.Component {
           style={{ textAlign: 'center' }}
         >
           <TabPane tab="等额本息" key="1">
-            {this.renderTabPan1()}
+            {this.renderTabPan1(amount, date, rate)}
           </TabPane>
           <TabPane tab="等额本金" key="2">
-            {this.renderTabPan2()}
+            {this.renderTabPan2(amount, date, rate)}
           </TabPane>
         </Tabs>
       </div>
