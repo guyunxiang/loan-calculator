@@ -1,4 +1,10 @@
-.normal {
-  font-family: Georgia, sans-serif;
-  padding: 16px;
+.card {
+  max-width: 600px;
+  width: 100%;
+}
+
+@media screen and (min-width: 768px) {
+  .normal {
+    padding: 20px;
+  }
 }

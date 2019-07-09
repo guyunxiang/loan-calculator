@@ -3,7 +3,6 @@
 export default {
   treeShaking: true,
   outputPath: 'docs',
-  base: '/loan-calculator/',
 
   plugins: [
     // ref: https://umijs.org/plugin/umi-plugin-react.html
