@@ -3,7 +3,6 @@ import {
   Row,
   Col,
   Card,
-  Tabs,
   Form,
   Radio,
   Select,
@@ -20,19 +19,22 @@ import {
   getMonthPlusDate,
 } from '../../untils';
 import {
-  loanOptions
+  loanOptions,
+  rate1Options,
+  rate2Options,
 } from '../../untils/const';
 import styles from './index.less';
 
-const { TabPane } = Tabs;
 const { Option } = Select;
 
 class Loan extends React.Component {
 
   state = {
-    amount: 0,
-    date: 0,
-    rate: 0,
+    type: 1,
+    amount: new BigNumber(0),
+    date: new BigNumber(0),
+    rate1: new BigNumber(1),
+    rate2: new BigNumber(1),
   }
 
   handleSubmit = (e) => {
@@ -40,21 +42,31 @@ class Loan extends React.Component {
     this.props.form.validateFields((err, values) => {
       if (err) { return }
       this.setState({
+        type: values.type,
         amount: new BigNumber(values.amount).multipliedBy(10000),
         date: new BigNumber(values.date),
-        rate: new BigNumber(values.rate).shiftedBy(-2),
+        rate1: new BigNumber(values.rate1).shiftedBy(-2),
+        rate2: new BigNumber(values.rate2).shiftedBy(-2),
         startDate: moment(values.startDate).format('YYYY/MM/DD'),
       });
     });
   }
 
-  // 获取月供明细
+  // 获取等额本金月供明细
   getLoanDetail = (amount, interest, capital, diff, startDate) => {
     let list = [];
     // 总还款额
     let capitalTotal = new BigNumber(0);
     // 总还款利息
     let interestTotal = new BigNumber(0);
+    // 判断是否金额正确性
+    if (!amount.toNumber()) {
+      return {
+        capitalTotal,
+        interestTotal,
+        list,
+      };
+    }
     list.push({
       date: startDate,
       value: 0,
@@ -81,8 +93,31 @@ class Loan extends React.Component {
     };
   }
 
-  // 渲染等额本息计算结果
-  renderTabPan1(amount, date, rate) {
+  /**
+   * 计算商业贷款
+   * @param  {Number} amount    贷款总额
+   * @param  {Number} date      贷款期数
+   * @param  {Number} rate      贷款利率
+   * @return {Object}           计算结果
+   */
+  getSDData = (amount, date, rate, startDate) => {
+    // 等额本息
+    const debxData = this.getDEBXData(amount, date, rate);
+    const debjData = this.getDEBJData(amount, date, rate, startDate);
+    return {
+      debxData,
+      debjData,
+    };
+  }
+
+  /**
+   * 计算等额本息月供数据
+   * @param  {[type]} amount [description]
+   * @param  {[type]} date   [description]
+   * @param  {[type]} rate   [description]
+   * @return {[type]}        [description]
+   */
+  getDEBXData = (amount, date, rate) => {
     // 总月数
     let monthNums = new BigNumber(0);
     // 每月还款本金
@@ -107,8 +142,67 @@ class Loan extends React.Component {
       // 总还款额 - 本金
       interestTotal = capitalTotal.minus(amount);
     }
-    return (
-      <div className={styles.tabpan}>
+    return {
+      capital,
+      capitalTotal,
+      interestTotal,
+    };
+  }
+
+  /**
+   * 计算等额本金月供数据
+   * @param  {[type]} amount [description]
+   * @param  {[type]} date   [description]
+   * @param  {[type]} rate   [description]
+   * @return {[type]}        [description]
+   */
+  getDEBJData = (amount, date, rate, startDate) => {
+    // 总月数
+    let monthNums = date.multipliedBy(12);
+    // 每月还款本金
+    let capital = amount.dividedBy(monthNums);
+    // 首月利息
+    let interest = amount.multipliedBy(rate.dividedBy(12));
+    // 每月递减金额
+    let diff = capital.multipliedBy(rate.dividedBy(12));
+    // 月供明细
+    const {
+      // 总还款额
+      capitalTotal,
+      // 总还款利息
+      interestTotal,
+      list
+    } = this.getLoanDetail(amount, interest, capital, diff, startDate);
+    return {
+      capital,
+      interest,
+      diff,
+      capitalTotal,
+      interestTotal,
+      list,
+    };
+  }
+
+  // 渲染等额本息计算结果
+  renderTabPan1() {
+    const {
+      type,
+      amount,
+      date,
+      rate1,
+      rate2,
+    } = this.state;
+
+    // 渲染商贷信息
+    const renderSDList = () => {
+      const {
+        debxData: {
+          capital,
+          capitalTotal,
+          interestTotal,
+        }
+      } = this.getSDData(amount, date, rate1);
+      return (
         <List
           header={<strong>商业贷款</strong>}
           dataSource={[
@@ -132,64 +226,25 @@ class Loan extends React.Component {
             </List.Item>
           )}
         />
-      </div>
-    )
-  }
-
-  /**
-   * 渲染等额本金计算结果
-   * @param  {Number} amount    贷款总额
-   * @param  {Number} date      贷款期数
-   * @param  {Number} rate      贷款利率
-   * @param  {DateString} startDate 起始日期
-   * @return {[type]}           [description]
-   */
-  renderTabPan2(amount, date, rate, startDate) {
-    // 总月数
-    let monthNums = new BigNumber(0);
-    // 每月还款本金
-    let capital = new BigNumber(0);
-    // 总还款额
-    let capitalTotal = new BigNumber(0);
-    // 首月利息
-    let interest = new BigNumber(0);
-    // 总还款利息
-    let interestTotal = new BigNumber(0);
-    // 每月递减金额
-    let diff = new BigNumber(0);
-    // 月供明细
-    let list = [];
-    // 如果金额存在
-    if (amount) {
-      monthNums = date.multipliedBy(12);
-      capital = amount.dividedBy(monthNums);
-      interest = amount.multipliedBy(rate.dividedBy(12));
-      diff = capital.multipliedBy(rate.dividedBy(12));
-      const result = this.getLoanDetail(amount, interest, capital, diff, startDate);
-      capitalTotal = result.capitalTotal;
-      interestTotal = result.interestTotal;
-      list = result.list;
+      )
     }
-    return (
-      <div className={styles.tabpan}>
+
+    // 渲染公积金贷款信息
+    const renderGJJDList = () => {
+      const {
+        debxData: {
+          capital,
+          capitalTotal,
+          interestTotal,
+        }
+      } = this.getSDData(amount, date, rate2);
+      return (
         <List
-          header={<strong>商业贷款</strong>}
+          header={<strong>公积金贷款</strong>}
           dataSource={[
             {
-              label: '首月月供（元）',
-              value: toFixed(capital.toNumber() + interest.toNumber()),
-            },
-            {
-              label: '月供本金(元)',
+              label: '每月月供(元)',
               value: toFixed(capital.toNumber()),
-            },
-            {
-              label: '首月利息(元)',
-              value: toFixed(interest.toNumber()),
-            },
-            {
-              label: '每月递减(元)',
-              value: toFixed(diff),
             },
             {
               label: '支付总利息(元)',
@@ -207,56 +262,226 @@ class Loan extends React.Component {
             </List.Item>
           )}
         />
-        <br/>
-        <Table
-          columns={[
-            {
-              title: '日期',
-              dataIndex: 'date',
-              key: 'date',
-              align: 'center',
-            },
-            {
-              title: '月供',
-              dataIndex: 'value',
-              key: 'value',
-              align: 'right',
-            },
-            {
-              title: '利息',
-              dataIndex: 'interest',
-              key: 'interest',
-              align: 'right',
-            },
-            {
-              title: '剩余贷款',
-              dataIndex: 'amount',
-              key: 'amount',
-              align: 'right',
-            }
-          ]}
-          rowKey="date"
-          dataSource={list}
-          rowClassName={(record) => {
-            // if (new Date(record.date).getTime() - new Date().getTime() < 0) {
-            //   return 'disabled';
-            // }
-          }}
-        />
+      )
+    }
+    return (
+      <div className={styles.tabpan}>
+        {type !== 2 ? renderSDList() : null}
+        {type !== 1 ? renderGJJDList() : null}
+      </div>
+    )
+  }
+
+  /**
+   * 渲染等额本金计算结果
+   * @param  {Number} amount    贷款总额
+   * @param  {Number} date      贷款期数
+   * @param  {Number} rate      贷款利率
+   * @param  {DateString} startDate 起始日期
+   * @return {[type]}           [description]
+   */
+  renderTabPan2() {
+    const {
+      type,
+      amount,
+      date,
+      rate1,
+      rate2,
+      startDate,
+    } = this.state;
+
+    // 渲染商贷信息
+    const renderSDList = () => {
+      const {
+        debjData: {
+          capital,
+          interest,
+          diff,
+          interestTotal,
+          capitalTotal,
+          list
+        }
+      } = this.getSDData(amount, date, rate1, startDate);
+      return (
+        <div>
+          <List
+            header={<strong>商业贷款</strong>}
+            dataSource={[
+              {
+                label: '首月月供（元）',
+                value: toFixed(capital.toNumber() + interest.toNumber()),
+              },
+              {
+                label: '月供本金(元)',
+                value: toFixed(capital.toNumber()),
+              },
+              {
+                label: '首月利息(元)',
+                value: toFixed(interest.toNumber()),
+              },
+              {
+                label: '每月递减(元)',
+                value: toFixed(diff),
+              },
+              {
+                label: '支付总利息(元)',
+                value: new BigNumber(toFixed(interestTotal.toNumber())).toFormat(),
+              },
+              {
+                label: '总还款额(元)',
+                value: new BigNumber(toFixed(capitalTotal.toNumber())).toFormat(),
+              },
+            ]}
+            style={{ textAlign: 'left' }}
+            renderItem={item => (
+              <List.Item className={styles.listItem}>
+                <strong>{item.label}: </strong><span>{item.value}</span>
+              </List.Item>
+            )}
+          />
+          <br/>
+          <Table
+            columns={[
+              {
+                title: '日期',
+                dataIndex: 'date',
+                key: 'date',
+                align: 'center',
+              },
+              {
+                title: '月供',
+                dataIndex: 'value',
+                key: 'value',
+                align: 'right',
+              },
+              {
+                title: '利息',
+                dataIndex: 'interest',
+                key: 'interest',
+                align: 'right',
+              },
+              {
+                title: '剩余贷款',
+                dataIndex: 'amount',
+                key: 'amount',
+                align: 'right',
+              }
+            ]}
+            rowKey="date"
+            dataSource={list}
+            rowClassName={(record) => {
+              // if (new Date(record.date).getTime() - new Date().getTime() < 0) {
+              //   return 'disabled';
+              // }
+            }}
+          />
+        </div>
+      )
+    }
+
+    // 渲染公积金贷信息
+    const renderGJJDList = () => {
+      const {
+        debjData: {
+          capital,
+          interest,
+          diff,
+          interestTotal,
+          capitalTotal,
+          list
+        }
+      } = this.getSDData(amount, date, rate2, startDate);
+      return (
+        <div>
+          <List
+            header={<strong>公积金贷款</strong>}
+            dataSource={[
+              {
+                label: '首月月供（元）',
+                value: toFixed(capital.toNumber() + interest.toNumber()),
+              },
+              {
+                label: '月供本金(元)',
+                value: toFixed(capital.toNumber()),
+              },
+              {
+                label: '首月利息(元)',
+                value: toFixed(interest.toNumber()),
+              },
+              {
+                label: '每月递减(元)',
+                value: toFixed(diff),
+              },
+              {
+                label: '支付总利息(元)',
+                value: new BigNumber(toFixed(interestTotal.toNumber())).toFormat(),
+              },
+              {
+                label: '总还款额(元)',
+                value: new BigNumber(toFixed(capitalTotal.toNumber())).toFormat(),
+              },
+            ]}
+            style={{ textAlign: 'left' }}
+            renderItem={item => (
+              <List.Item className={styles.listItem}>
+                <strong>{item.label}: </strong><span>{item.value}</span>
+              </List.Item>
+            )}
+          />
+          <br/>
+          <Table
+            columns={[
+              {
+                title: '日期',
+                dataIndex: 'date',
+                key: 'date',
+                align: 'center',
+              },
+              {
+                title: '月供',
+                dataIndex: 'value',
+                key: 'value',
+                align: 'right',
+              },
+              {
+                title: '利息',
+                dataIndex: 'interest',
+                key: 'interest',
+                align: 'right',
+              },
+              {
+                title: '剩余贷款',
+                dataIndex: 'amount',
+                key: 'amount',
+                align: 'right',
+              }
+            ]}
+            rowKey="date"
+            dataSource={list}
+            rowClassName={(record) => {
+              // if (new Date(record.date).getTime() - new Date().getTime() < 0) {
+              //   return 'disabled';
+              // }
+            }}
+          />
+        </div>
+      )
+    }
+
+    return (
+      <div className={styles.tabpan}>
+        {type !== 2 ? renderSDList() : null}
+        {type !== 1 ? renderGJJDList() : null}
       </div>
     );
   }
 
   render() {
     const {
+      getFieldValue,
       getFieldDecorator
     } = this.props.form;
-    const {
-      amount,
-      date,
-      rate,
-      startDate,
-    } = this.state;
+    const type = getFieldValue('type');
     return (
       <Row gutter={16}>
         <Col md={{ span: 8 }}>
@@ -304,18 +529,44 @@ class Loan extends React.Component {
                 )
               }
             </Form.Item>
-            <Form.Item label="贷款利率" required>
-              {
-                getFieldDecorator('rate', {
-                  initialValue: 5.39,
-                })(
-                  <Input
-                    type="number"
-                    addonAfter="%"
-                  />
-                )
-              }
-            </Form.Item>
+            {
+              type !== 2 ? (
+                <Form.Item label="商业贷款利率" required>
+                  {
+                    getFieldDecorator('rate1', {
+                      initialValue: 5.39,
+                    })(
+                      <Select>
+                        {
+                          rate1Options.map((item) => (
+                            <Option value={item.value} key={item.value}>{item.label}</Option>
+                          ))
+                        }
+                      </Select>
+                    )
+                  }
+                </Form.Item>
+              ) : null
+            }
+            {
+              type !== 1 ? (
+                <Form.Item label="公积金贷款利率" required>
+                  {
+                    getFieldDecorator('rate2', {
+                      initialValue: 3.25,
+                    })(
+                      <Select>
+                        {
+                          rate2Options.map((item) => (
+                            <Option value={item.value} key={item.value}>{item.label}</Option>
+                          ))
+                        }
+                      </Select>
+                    )
+                  }
+                </Form.Item>
+              ) : null
+            }
             <Form.Item label="贷款通过日期" required>
               {
                 getFieldDecorator('startDate', {
@@ -343,11 +594,11 @@ class Loan extends React.Component {
         </Col>
         <Col md={{ span: 16 }}>
           <Card title="等额本息">
-            {this.renderTabPan1(amount, date, rate)}
+            {this.renderTabPan1()}
           </Card>
           <br/>
           <Card title="等额本金">
-            {this.renderTabPan2(amount, date, rate, startDate)}
+            {this.renderTabPan2()}
           </Card>
         </Col>
       </Row>

@@ -2,13 +2,18 @@
  * 截断小数点后几位
  * @param  {Number} number  要截断的数字
  * @param  {Number} tofixed 截断位数，默认 2 位
+ * @param  {Boolean}rounded 是否启用四舍五入
  * @return {Number}         截断后的数字
  */
-export const toFixed = (number, tofixed = 2) => {
-  // 舍去小数点后第三位数字
-  // return Math.floor(number * Math.pow(10, tofixed) ) / Math.pow(10, tofixed);
+export const toFixed = (number, tofixed = 2, rounded = true) => {
+  if (isNaN(number)) { return 0 }
   // 对照建行账单发现是保留小数点后两位，第三位四舍五入
-  return number.toFixed(2);
+  if (rounded) {
+    return number.toFixed(2);
+  } else {
+    // 舍去小数点后第三位数字
+    return Math.floor(number * Math.pow(10, tofixed) ) / Math.pow(10, tofixed);
+  }
 }
 
 /**
