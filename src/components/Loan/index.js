@@ -1,10 +1,16 @@
 import React from 'react';
 import {
+  Row,
+  Col,
+  Card,
   Tabs,
   Form,
+  Radio,
   Select,
   Input,
+  DatePicker,
   Button,
+  List,
   Table,
 } from 'antd';
 import BigNumber from 'bignumber.js';
@@ -13,8 +19,10 @@ import {
   toFixed,
   getMonthPlusDate,
 } from '../../untils';
+import {
+  loanOptions
+} from '../../untils/const';
 import styles from './index.less';
-
 
 const { TabPane } = Tabs;
 const { Option } = Select;
@@ -35,8 +43,42 @@ class Loan extends React.Component {
         amount: new BigNumber(values.amount).multipliedBy(10000),
         date: new BigNumber(values.date),
         rate: new BigNumber(values.rate).shiftedBy(-2),
+        startDate: moment(values.startDate).format('YYYY/MM/DD'),
       });
     });
+  }
+
+  // 获取月供明细
+  getLoanDetail = (amount, interest, capital, diff, startDate) => {
+    let list = [];
+    // 总还款额
+    let capitalTotal = new BigNumber(0);
+    // 总还款利息
+    let interestTotal = new BigNumber(0);
+    list.push({
+      date: startDate,
+      value: 0,
+      interest: 0,
+      amount: amount.toFixed(2),
+    });
+    // i: 利息，j: 月数，k: 本金，d:
+    for (let i = interest, j = 1, k = amount.minus(capital); k.toNumber() > 0; i = i.minus(diff), j++, k = k.minus(capital)) {
+      // 累加总利息
+      interestTotal = interestTotal.plus(i);
+      // 累加还款总额
+      capitalTotal = capitalTotal.plus(capital.plus(i));
+      list.push({
+        date: moment(getMonthPlusDate(j, startDate)).format('YYYY/MM/DD'),
+        value: toFixed(capital.plus(i).toNumber()),
+        interest: toFixed(i.toNumber()),
+        amount: toFixed(k.toNumber()),
+      });
+    }
+    return {
+      capitalTotal,
+      interestTotal,
+      list,
+    };
   }
 
   // 渲染等额本息计算结果
@@ -67,28 +109,42 @@ class Loan extends React.Component {
     }
     return (
       <div className={styles.tabpan}>
-        <div className={styles.tabpan__header}>
-          <h1>{toFixed(capital.toNumber())}</h1>
-          <span>每月月供(元)</span>
-        </div>
-        <div className={styles.tabpan__content}>
-          <ul className={styles.ul2}>
-            <li>
-              <h2>{new BigNumber(toFixed(interestTotal.toNumber())).toFormat()}</h2>
-              <span>支付总利息(元)</span>
-            </li>
-            <li>
-              <h2>{new BigNumber(toFixed(capitalTotal.toNumber())).toFormat()}</h2>
-              <span>总还款额(元)</span>
-            </li>
-          </ul>
-        </div>
+        <List
+          header={<strong>商业贷款</strong>}
+          dataSource={[
+            {
+              label: '每月月供(元)',
+              value: toFixed(capital.toNumber()),
+            },
+            {
+              label: '支付总利息(元)',
+              value: new BigNumber(toFixed(interestTotal.toNumber())).toFormat(),
+            },
+            {
+              label: '总还款额(元)',
+              value: new BigNumber(toFixed(capitalTotal.toNumber())).toFormat(),
+            },
+          ]}
+          style={{ textAlign: 'left' }}
+          renderItem={item => (
+            <List.Item className={styles.listItem}>
+              <strong>{item.label}: </strong><span>{item.value}</span>
+            </List.Item>
+          )}
+        />
       </div>
     )
   }
 
-  // 渲染等额本金计算结果
-  renderTabPan2(amount, date, rate) {
+  /**
+   * 渲染等额本金计算结果
+   * @param  {Number} amount    贷款总额
+   * @param  {Number} date      贷款期数
+   * @param  {Number} rate      贷款利率
+   * @param  {DateString} startDate 起始日期
+   * @return {[type]}           [description]
+   */
+  renderTabPan2(amount, date, rate, startDate) {
     // 总月数
     let monthNums = new BigNumber(0);
     // 每月还款本金
@@ -109,59 +165,49 @@ class Loan extends React.Component {
       capital = amount.dividedBy(monthNums);
       interest = amount.multipliedBy(rate.dividedBy(12));
       diff = capital.multipliedBy(rate.dividedBy(12));
-      // 明细列表添加初始记录
-      list.push({
-        date: '2018/07/18',
-        value: 0,
-        interest: 0,
-        amount: '967000.00',
-      });
-      // i: 利息，j: 月数，k: 本金，d:
-      for (let i = interest, j = 1, k = amount.minus(capital); k.toNumber() > 0; i = i.minus(diff), j++, k = k.minus(capital)) {
-        // 累加总利息
-        interestTotal = interestTotal.plus(i);
-        // 累加还款总额
-        capitalTotal = capitalTotal.plus(capital.plus(i));
-        list.push({
-          date: moment(getMonthPlusDate(j)).format('YYYY/MM/DD'),
-          value: toFixed(capital.plus(i).toNumber()),
-          interest: toFixed(i.toNumber()),
-          amount: toFixed(k.toNumber()),
-        });
-      }
+      const result = this.getLoanDetail(amount, interest, capital, diff, startDate);
+      capitalTotal = result.capitalTotal;
+      interestTotal = result.interestTotal;
+      list = result.list;
     }
     return (
       <div className={styles.tabpan}>
-        <div className={styles.tabpan__header}>
-          <h1>{toFixed(capital.toNumber() + interest.toNumber())}</h1>
-          <span>首月月供(元)</span>
-        </div>
-        <div className={styles.tabpan__content}>
-          <ul className={styles.ul1}>
-            <li>
-              <h2>{toFixed(capital.toNumber())}</h2>
-              <span>月供本金(元)</span>
-            </li>
-            <li>
-              <h2>{toFixed(interest.toNumber())}</h2>
-              <span>首月利息(元)</span>
-            </li>
-            <li>
-              <h2>{toFixed(diff)}</h2>
-              <span>每月递减(元)</span>
-            </li>
-          </ul>
-          <ul className={styles.ul2}>
-            <li>
-              <h2>{new BigNumber(toFixed(interestTotal.toNumber())).toFormat()}</h2>
-              <span>支付总利息(元)</span>
-            </li>
-            <li>
-              <h2>{new BigNumber(toFixed(capitalTotal.toNumber())).toFormat()}</h2>
-              <span>总还款额(元)</span>
-            </li>
-          </ul>
-        </div>
+        <List
+          header={<strong>商业贷款</strong>}
+          dataSource={[
+            {
+              label: '首月月供（元）',
+              value: toFixed(capital.toNumber() + interest.toNumber()),
+            },
+            {
+              label: '月供本金(元)',
+              value: toFixed(capital.toNumber()),
+            },
+            {
+              label: '首月利息(元)',
+              value: toFixed(interest.toNumber()),
+            },
+            {
+              label: '每月递减(元)',
+              value: toFixed(diff),
+            },
+            {
+              label: '支付总利息(元)',
+              value: new BigNumber(toFixed(interestTotal.toNumber())).toFormat(),
+            },
+            {
+              label: '总还款额(元)',
+              value: new BigNumber(toFixed(capitalTotal.toNumber())).toFormat(),
+            },
+          ]}
+          style={{ textAlign: 'left' }}
+          renderItem={item => (
+            <List.Item className={styles.listItem}>
+              <strong>{item.label}: </strong><span>{item.value}</span>
+            </List.Item>
+          )}
+        />
+        <br/>
         <Table
           columns={[
             {
@@ -191,7 +237,11 @@ class Loan extends React.Component {
           ]}
           rowKey="date"
           dataSource={list}
-          size="small"
+          rowClassName={(record) => {
+            // if (new Date(record.date).getTime() - new Date().getTime() < 0) {
+            //   return 'disabled';
+            // }
+          }}
         />
       </div>
     );
@@ -205,84 +255,102 @@ class Loan extends React.Component {
       amount,
       date,
       rate,
+      startDate,
     } = this.state;
     return (
-      <div>
-        <Form
-          layout="vertical"
-          onSubmit={this.handleSubmit}
-        >
-          <Form.Item label="贷款类型">
-            {
-              getFieldDecorator('type', {
-                initialValue: '1',
-              })(
-                <Select>
-                  <Option value="1">商业贷款</Option>
-                  <Option value="2">公积金贷款</Option>
-                </Select>
-              )
-            }
-          </Form.Item>
-          <Form.Item label="贷款金额" required>
-            {
-              getFieldDecorator('amount', {
-                rules: [{ required: true, message: '请输入贷款金额！' }],
-                initialValue: 96.7,
-              })(
-                <Input
-                  type="number"
-                  addonAfter="万元"
-                />
-              )
-            }
-          </Form.Item>
-          <Form.Item label="贷款年数" required>
-            {
-              getFieldDecorator('date', {
-                initialValue: 30,
-              })(
-                <Input
-                  type="number"
-                  addonAfter="年数"
-                />
-              )
-            }
-          </Form.Item>
-          <Form.Item label="贷款利率" required>
-            {
-              getFieldDecorator('rate', {
-                initialValue: 5.39,
-              })(
-                <Input
-                  type="number"
-                  addonAfter="%"
-                />
-              )
-            }
-          </Form.Item>
-          <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              style={{ width: '100%' }}
-            >
-              计算
-            </Button>
-          </Form.Item>
-        </Form>
-        <Tabs
-          defaultActiveKey="1"
-          style={{ textAlign: 'center' }}
-        >
-          <TabPane tab="等额本息" key="1">
+      <Row gutter={16}>
+        <Col md={{ span: 8 }}>
+          <Form
+            layout="vertical"
+            onSubmit={this.handleSubmit}
+          >
+            <Form.Item label="贷款类型">
+              {
+                getFieldDecorator('type', {
+                    initialValue: 1,
+                })(
+                  <Radio.Group>
+                    {
+                      loanOptions.map((item) => (
+                        <Radio key={item.value} value={item.value}>{item.label}</Radio>
+                      ))
+                    }
+                  </Radio.Group>
+                )
+              }
+            </Form.Item>
+            <Form.Item label="贷款金额" required>
+              {
+                getFieldDecorator('amount', {
+                  rules: [{ required: true, message: '请输入贷款金额！' }],
+                    initialValue: 96.7,
+                })(
+                  <Input
+                    type="number"
+                    addonAfter="万元"
+                  />
+                )
+              }
+            </Form.Item>
+            <Form.Item label="贷款年数" required>
+              {
+                getFieldDecorator('date', {
+                    initialValue: 30,
+                })(
+                  <Input
+                    type="number"
+                    addonAfter="年数"
+                  />
+                )
+              }
+            </Form.Item>
+            <Form.Item label="贷款利率" required>
+              {
+                getFieldDecorator('rate', {
+                  initialValue: 5.39,
+                })(
+                  <Input
+                    type="number"
+                    addonAfter="%"
+                  />
+                )
+              }
+            </Form.Item>
+            <Form.Item label="贷款通过日期" required>
+              {
+                getFieldDecorator('startDate', {
+                  initialValue: moment('2018/07/18'),
+                })(
+                  <DatePicker
+                    type="number"
+                    format="YYYY/MM/DD"
+                    placeholder="请选择贷款初始日期"
+                    style={{ width: '100%' }}
+                  />
+                )
+              }
+            </Form.Item>
+            <Form.Item>
+              <Button
+                type="primary"
+                htmlType="submit"
+                style={{ width: '100%' }}
+              >
+                计算月供
+              </Button>
+            </Form.Item>
+          </Form>
+        </Col>
+        <Col md={{ span: 16 }}>
+          <Card title="等额本息">
             {this.renderTabPan1(amount, date, rate)}
-          </TabPane>
-          <TabPane tab="等额本金" key="2">
-            {this.renderTabPan2(amount, date, rate)}
-          </TabPane>
-        </Tabs>
-      </div>
+          </Card>
+          <br/>
+          <Card title="等额本金">
+            {this.renderTabPan2(amount, date, rate, startDate)}
+          </Card>
+        </Col>
+      </Row>
     );
   }
 }

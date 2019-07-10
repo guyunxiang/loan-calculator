@@ -6,3 +6,12 @@ html, body, #root {
 body {
   margin: 0;
 }
+
+.disabled {
+  background-color: #fafafa;
+  opacity: .5;
+}
+
+.disabled:hover {
+  background-color: #fafafa;
+}
