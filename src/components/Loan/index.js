@@ -217,22 +217,50 @@ class Loan extends React.Component {
   }
 
 
-  /**
-   * 计算贷款后还款多少期时剩余本金金额
-   * @param  {BigNumber} amount    贷款总金额
-   * @param  {Number} date        贷款总期数
-   * @param  {Number} rate        贷款利率
-   * @param  {String} startDate   初始日期
-   * @param  {Number} date2       剩余还款期数
-   * @return {BigNumber}          剩余本金金额
-   */
-  getDateAmount = (amount, date, rate, startDate, date2) => {
-    // 已经归还贷款期数
-    const backDate = date.minus(date2);
-    // 每月归还本金
-    const capital = amount.dividedBy(date);
-    // 剩余本金 = 贷款总额 - 每月归还本金 x 归还期数
-    return amount.minus(capital.multipliedBy(backDate));
+  // 获取等额本金利息差
+  getDEBJInterestDiff = ({ ...props }, { ...prePayParams }) => {
+    const {
+      type,
+      date,
+      startDate,
+    } = props;
+    // 计算原贷款，剩余未还的利息
+    const getOldLoanData = () => {
+      const amount = type === 1 ? props.amount1 : props.amount2;
+      const rate = type === 1 ? props.rate1 : props.rate2;
+      const {
+        list,
+        interestTotal,
+      } = this.getDEBJData(amount, date, rate, startDate);
+      // 已还的利息
+      let hadBackInterest = new BigNumber(0);
+      // 已还期数
+      const hadBackDate = date.minus(prePayParams.date);
+      // 计算已还利息总额
+      for (let i = 0; i < hadBackDate.toNumber(); i++) {
+        hadBackInterest = hadBackInterest.plus(list[i].interest);
+      }
+      // 剩余未还的利息
+      return {
+        interestTotal,
+        hadBackInterest,
+      };
+    }
+    // 计算提前还款后，需要还的利息总额
+    const getNewLoanData = () => {
+      const amount = type === 1 ? prePayParams.amount1 : prePayParams.amount2;
+      const rate = type === 1 ? prePayParams.rate1 : prePayParams.rate2;
+      const {
+        interestTotal,
+      } = this.getDEBJData(amount, prePayParams.date, rate, prePayParams.startDate);
+      return {
+        interestTotal
+      };
+    }
+    return {
+      hadBackInterest: getOldLoanData().hadBackInterest,
+      debjInterestDiff: getOldLoanData().interestTotal.minus(getOldLoanData().hadBackInterest).minus(getNewLoanData().interestTotal),
+    }
   }
 
   // 渲染等额本息计算结果
@@ -671,16 +699,20 @@ class Loan extends React.Component {
     prePayParams.type = prePayType;
     // 计算提前还款后的还贷初始日期
     prePayParams.startDate = `${prePayDate}/${startDate.split('/')[2]}`;
-    // 剩余还贷本金
-    const amount = this.getDateAmount(amount1, date, rate1, startDate, prePayParams.date);
-    // 计算提前还款后剩余的本金
+    // 计算提前还款后剩余的本金，剩余还款金额 = 贷款额 - 每月还款本金 * 已还期数 - 提前还款额
     if (prePayType === 1) {
-      prePayParams.amount1 = amount.minus(prePayAmount);
+      prePayParams.amount1 = amount1.minus(amount1.dividedBy(date).multipliedBy(date.minus(prePayParams.date))).minus(prePayAmount);;
       prePayParams.amount2 = amount2;
     } else if (prePayType === 2) {
       prePayParams.amount1 = amount1;
-      prePayParams.amount2 = amount.minus(prePayAmount);
+      prePayParams.amount2 = amount2.minus(amount2.dividedBy(date).multipliedBy(date.minus(prePayParams.date))).minus(prePayAmount);;
     }
+
+    // 提前还款等额本金利息差
+    const {
+      hadBackInterest,
+      debjInterestDiff,
+    } = this.getDEBJInterestDiff(this.state, prePayParams);
 
     return (
       <div>
@@ -709,6 +741,14 @@ class Loan extends React.Component {
                 label: '剩余还贷期数',
                 value: `${parseInt(prePayParams.date.dividedBy(12).toNumber(), 10)}年${prePayParams.date.modulo(12).toNumber()}月`,
               },
+              {
+                label: '等额本金已经还利息',
+                value: new BigNumber(toFixed(hadBackInterest.toNumber())).toFormat(),
+              },
+              {
+                label: '等额本金利息少还金额',
+                value: new BigNumber(toFixed(debjInterestDiff.toNumber())).toFormat(),
+              }
             ]}
             style={{ textAlign: 'left' }}
             renderItem={item => (
@@ -900,7 +940,7 @@ class Loan extends React.Component {
                           <MonthPicker
                             placeholder="请选择提前还款日期"
                             style={{ width: '100%' }}
-                            disabledDate={(current) => current && current < moment().endOf('day')}
+                            disabledDate={(current) => current && current < moment(this.state.startDate).endOf('day')}
                           />
                         )
                       }
