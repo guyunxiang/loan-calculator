@@ -37,3 +37,27 @@ export const getMonthPlusDate = (nums, date = '2018/7/18') => {
     return new Date(`${year + years + 1}/${month + months - 12}/${day}`);
   }
 }
+
+/**
+ * 计算两个日期之间的月数差
+ * @param  {[type]} startDate 开始日期
+ * @param  {[type]} endDate   结束日期
+ * @return {[type]}           [description]
+ */
+export const getMonthDiff = (startDate, endDate) => {
+  const startDateInfo = new Date(startDate);
+  const endDateInfo = new Date(endDate);
+  const startYear = startDateInfo.getFullYear(),
+  startMonth = startDateInfo.getMonth() + 1;
+  const endYear = endDateInfo.getFullYear(),
+  endMonth = endDateInfo.getMonth() + 1;
+  let diffYear = endYear - startYear;
+  let diffMonth;
+  if (endMonth < startMonth) {
+    diffYear -= 1;
+    diffMonth = endMonth + 12 - startMonth;
+  } else {
+    diffMonth = endMonth - startMonth;
+  }
+  return diffMonth + diffYear * 12;
+}
