@@ -911,7 +911,7 @@ class Loan extends React.Component {
             date.toNumber() ? (
               <div>
                 <Divider />
-                <h2>提前还款</h2>
+                <h3>提前还款</h3>
                 <Form
                   layout="vertical"
                   onSubmit={this.handleSubmitPrePay}
