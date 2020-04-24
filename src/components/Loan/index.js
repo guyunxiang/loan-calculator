@@ -13,9 +13,7 @@ import {
   Table,
   Divider,
   Collapse,
-  LocaleProvider,
 } from 'antd';
-import zh_CN from 'antd/lib/locale-provider/zh_CN';
 import BigNumber from 'bignumber.js';
 import moment from 'moment';
 import {
@@ -262,10 +260,10 @@ class Loan extends React.Component {
   // 获取等额本金利息差
   getDEBJInterestDiff = ({ ...props }, { ...prePayParams }) => {
     const {
-      type,
       date,
       startDate,
     } = props;
+    const type = +this.props.form.getFieldValue('prePayType');
     // 计算原贷款，剩余未还的利息
     const getOldLoanData = () => {
       const amount = type === 1 ? props.amount1 : props.amount2;
@@ -995,21 +993,19 @@ class Loan extends React.Component {
                       )
                     }
                   </Form.Item>
-                  <LocaleProvider locale={zh_CN}>
-                    <Form.Item label="日期" required>
-                      {
-                        getFieldDecorator('prePayDate', {
-                          initialValue: moment('2021/07/18'),
-                        })(
-                          <MonthPicker
-                            placeholder="请选择提前还款日期"
-                            style={{ width: '100%' }}
-                            disabledDate={(current) => current && current < moment(this.state.startDate).endOf('day')}
-                          />
-                        )
-                      }
-                    </Form.Item>
-                  </LocaleProvider>
+                  <Form.Item label="日期" required>
+                    {
+                      getFieldDecorator('prePayDate', {
+                        initialValue: moment('2021/07/18'),
+                      })(
+                        <MonthPicker
+                          placeholder="请选择提前还款日期"
+                          style={{ width: '100%' }}
+                          disabledDate={(current) => current && current < moment(this.state.startDate).endOf('day')}
+                        />
+                      )
+                    }
+                  </Form.Item>
                   <Form.Item label="金额" required>
                     {
                       getFieldDecorator('prePayAmount', {

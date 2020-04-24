@@ -12,7 +12,7 @@ class HomePage extends React.Component {
     return (
       <div className={styles.normal}>
         <Card
-          title="房贷月供计算器"
+          title="月供计算器"
           className={styles.card}
         >
           <Loan />
