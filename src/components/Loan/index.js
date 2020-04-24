@@ -12,6 +12,7 @@ import {
   List,
   Table,
   Divider,
+  Collapse,
   LocaleProvider,
 } from 'antd';
 import zh_CN from 'antd/lib/locale-provider/zh_CN';
@@ -26,6 +27,9 @@ import {
   loanOptions,
   rate1Options,
   rate2Options,
+
+  DEFAULTRATE1,
+  DEFAULTRATE2,
 } from '../../untils/const';
 import styles from './index.less';
 
@@ -56,11 +60,50 @@ class Loan extends React.Component {
     prePayAmount: new BigNumber(0),
   }
 
+  getDefaultValues = () => {
+    let defaultValues = {
+      type: 1,
+      amount1: 0, // 96.7
+      amount2: 0, // 34.7
+      date: 0,    // 30
+      rate1: DEFAULTRATE1,   // 5.39
+      rate2: DEFAULTRATE2,   // 3.25
+      startDate: moment(new Date()).format('YYYY/MM/DD'), // 2018/07-18
+    };
+    try {
+      const localData = JSON.parse(window.localStorage.getItem('defaultValues'));
+      const {
+        type,
+        amount1,
+        amount2,
+        date,
+        rate1,
+        rate2,
+        startDate,
+      } = localData;
+      if (localData) {
+        defaultValues = {
+          type,
+          amount1: +amount1,
+          amount2: +amount2,
+          date: +date,
+          rate1: +rate1,
+          rate2: +rate2,
+          startDate,
+        };
+      }
+    } catch (e) {
+    }
+    return defaultValues;
+  }
+
   // 计算贷款
   handleSubmit = (e) => {
     e.preventDefault();
     this.props.form.validateFields((err, values) => {
       if (err) { return }
+      // console.log(107, DEFAULTVALUES, values);
+      window.localStorage.setItem('defaultValues', JSON.stringify(Object.assign({}, this.getDefaultValues(), values)));
       this.setState({
         type: values.type,
         amount1: new BigNumber(values.amount1).multipliedBy(10000),
@@ -215,7 +258,6 @@ class Loan extends React.Component {
       list,
     };
   }
-
 
   // 获取等额本金利息差
   getDEBJInterestDiff = ({ ...props }, { ...prePayParams }) => {
@@ -640,11 +682,6 @@ class Loan extends React.Component {
             ]}
             rowKey="date"
             dataSource={list}
-            rowClassName={(record) => {
-              // if (new Date(record.date).getTime() - new Date().getTime() < 0) {
-              //   return 'disabled';
-              // }
-            }}
           />
         </div>
       )
@@ -661,6 +698,7 @@ class Loan extends React.Component {
 
   // 渲染计算结果
   renderResult() {
+    const { Panel } = Collapse;
     const {
       amount1,
       amount2,
@@ -677,13 +715,22 @@ class Loan extends React.Component {
     if (prePayAmount.toNumber() === 0) {
       return (
         <div>
-          <Card title="等额本息">
-            {this.renderTabPan1(this.state)}
+          <Card>
+            <Collapse defaultActiveKey={['1']}>
+              <Panel header="等额本息" key="1">
+                {this.renderTabPan1(this.state)}
+              </Panel>
+            </Collapse>
           </Card>
           <br/>
-          <Card title="等额本金">
-            {this.renderTabPan2(this.state)}
+          <Card>
+            <Collapse>
+              <Panel header="等额本金" key="2">
+                {this.renderTabPan2(this.state)}
+              </Panel>
+            </Collapse>
           </Card>
+          <br/>
         </div>
       );
     }
@@ -701,11 +748,11 @@ class Loan extends React.Component {
     prePayParams.startDate = `${prePayDate}/${startDate.split('/')[2]}`;
     // 计算提前还款后剩余的本金，剩余还款金额 = 贷款额 - 每月还款本金 * 已还期数 - 提前还款额
     if (prePayType === 1) {
-      prePayParams.amount1 = amount1.minus(amount1.dividedBy(date).multipliedBy(date.minus(prePayParams.date))).minus(prePayAmount);;
+      prePayParams.amount1 = amount1.minus(amount1.dividedBy(date).multipliedBy(date.minus(prePayParams.date).minus(new BigNumber(1)))).minus(prePayAmount);;
       prePayParams.amount2 = amount2;
     } else if (prePayType === 2) {
       prePayParams.amount1 = amount1;
-      prePayParams.amount2 = amount2.minus(amount2.dividedBy(date).multipliedBy(date.minus(prePayParams.date))).minus(prePayAmount);;
+      prePayParams.amount2 = amount2.minus(amount2.dividedBy(date).multipliedBy(date.minus(prePayParams.date).minus(new BigNumber(1)))).minus(prePayAmount);;
     }
 
     // 提前还款等额本金利息差
@@ -716,12 +763,20 @@ class Loan extends React.Component {
 
     return (
       <div>
-        <Card title="等额本息">
-          {this.renderTabPan1(this.state)}
+        <Card>
+          <Collapse>
+            <Panel header="等额本息" key="1">
+              {this.renderTabPan1(this.state)}
+            </Panel>
+          </Collapse>
         </Card>
         <br/>
-        <Card title="等额本金">
-          {this.renderTabPan2(this.state)}
+        <Card>
+          <Collapse>
+            <Panel header="等额本金" key="2">
+              {this.renderTabPan2(this.state)}
+            </Panel>
+          </Collapse>
         </Card>
         <Divider />
         <h2>提前还款</h2>
@@ -759,12 +814,20 @@ class Loan extends React.Component {
           />
         </Card>
         <br/>
-        <Card title="等额本息">
-          {this.renderTabPan1(prePayParams)}
+        <Card>
+          <Collapse>
+            <Panel header="等额本息" key="1">
+              {this.renderTabPan1(prePayParams)}
+            </Panel>
+          </Collapse>
         </Card>
         <br/>
-        <Card title="等额本金">
-          {this.renderTabPan2(prePayParams)}
+        <Card>
+          <Collapse>
+            <Panel header="等额本金" key="2">
+              {this.renderTabPan2(prePayParams)}
+            </Panel>
+          </Collapse>
         </Card>
       </div>
     )
@@ -775,7 +838,8 @@ class Loan extends React.Component {
       getFieldValue,
       getFieldDecorator
     } = this.props.form;
-    const type = getFieldValue('type') || 1;
+    const DEFAULTVALUES = this.getDefaultValues();
+    const type = getFieldValue('type') || DEFAULTVALUES.type;
     const { date } = this.state;
     return (
       <Row gutter={16}>
@@ -787,7 +851,7 @@ class Loan extends React.Component {
             <Form.Item label="贷款类型">
               {
                 getFieldDecorator('type', {
-                    initialValue: type,
+                  initialValue: DEFAULTVALUES.type,
                 })(
                   <Radio.Group>
                     {
@@ -805,7 +869,7 @@ class Loan extends React.Component {
                   {
                     getFieldDecorator('amount1', {
                       rules: [{ required: true, message: '请输入贷款金额！' }],
-                        initialValue: 96.7,
+                      initialValue: +DEFAULTVALUES.amount1,
                     })(
                       <Input
                         type="number"
@@ -822,7 +886,7 @@ class Loan extends React.Component {
                   {
                     getFieldDecorator('amount2', {
                       rules: [{ required: true, message: '请输入贷款金额！' }],
-                        initialValue: 34.7,
+                      initialValue: +DEFAULTVALUES.amount2,
                     })(
                       <Input
                         type="number"
@@ -836,7 +900,7 @@ class Loan extends React.Component {
             <Form.Item label="贷款年数" required>
               {
                 getFieldDecorator('date', {
-                    initialValue: 30,
+                  initialValue: +DEFAULTVALUES.date,
                 })(
                   <Input
                     type="number"
@@ -850,7 +914,7 @@ class Loan extends React.Component {
                 <Form.Item label="商业贷款利率" required>
                   {
                     getFieldDecorator('rate1', {
-                      initialValue: 5.39,
+                      initialValue: +DEFAULTVALUES.rate1,
                     })(
                       <Select>
                         {
@@ -869,7 +933,7 @@ class Loan extends React.Component {
                 <Form.Item label="公积金贷款利率" required>
                   {
                     getFieldDecorator('rate2', {
-                      initialValue: 3.25,
+                      initialValue: +DEFAULTVALUES.rate2,
                     })(
                       <Select>
                         {
@@ -886,7 +950,7 @@ class Loan extends React.Component {
             <Form.Item label="贷款通过日期" required>
               {
                 getFieldDecorator('startDate', {
-                  initialValue: moment('2018/07/18'),
+                  initialValue: moment(DEFAULTVALUES.startDate),
                 })(
                   <DatePicker
                     type="number"
@@ -919,7 +983,7 @@ class Loan extends React.Component {
                   <Form.Item label="还贷类型">
                     {
                       getFieldDecorator('prePayType', {
-                        initialValue: type,
+                        initialValue: getFieldValue('type') !== 3 ? getFieldValue('type') : 1,
                       })(
                         <Radio.Group>
                           {

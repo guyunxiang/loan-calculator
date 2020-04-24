@@ -8,15 +8,11 @@ import styles from './index.css';
 
 class HomePage extends React.Component {
 
-  componentDidMount() {
-    console.log('ok');
-  }
-
   render () {
     return (
       <div className={styles.normal}>
         <Card
-          title="月供计算"
+          title="房贷月供计算器"
           className={styles.card}
         >
           <Loan />
