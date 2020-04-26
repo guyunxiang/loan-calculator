@@ -83,6 +83,7 @@ class Loan extends React.Component {
       } = localData;
       if (localData) {
         defaultValues = {
+          ...localData,
           type,
           amount1: +amount1,
           amount2: +amount2,
@@ -121,6 +122,7 @@ class Loan extends React.Component {
     e.preventDefault();
     this.props.form.validateFields((err, values) => {
       if (err) { return }
+      window.localStorage.setItem('defaultValues', JSON.stringify(Object.assign({}, this.getDefaultValues(), values)));
       this.setState({
         prePayType: values.prePayType,
         prePayDate: new BigNumber(values.prePayDate).multipliedBy(12),
@@ -1062,6 +1064,7 @@ class Loan extends React.Component {
     } = this.props.form;
     const { date, startDate } = this.state;
     if (!date.toNumber()) { return null }
+    const DEFAULTVALUES = this.getDefaultValues();
     let prePayStartDate;
     try {
       let [year, month, day] = startDate.split('/');
@@ -1120,7 +1123,7 @@ class Loan extends React.Component {
                     }
                   }
                 ],
-                initialValue: 10,
+                initialValue: +DEFAULTVALUES.prePayAmount || 10,
               })(
                 <Input
                   type="number"
@@ -1145,7 +1148,7 @@ class Loan extends React.Component {
                     }
                   }
                 ],
-                initialValue: date.toNumber()/12 - 3,
+                initialValue: DEFAULTVALUES.prePayDate || date.toNumber()/12 - 3,
               })(
                 <Input
                   type="number"
