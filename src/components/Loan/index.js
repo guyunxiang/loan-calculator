@@ -749,7 +749,7 @@ class Loan extends React.Component {
     // 贷款额 amount1
     // 每月还款本金 amount1.dividedBy(date)
     // 已还期数 new BigNumber(getMonthDiff(startDate, prePayStartDate))).minus(new BigNumber(1))
-    console.log(amount1.dividedBy(date).multipliedBy((new BigNumber(getMonthDiff(startDate, prePayStartDate))).minus(new BigNumber(1))).toNumber());
+    // console.log(amount1.dividedBy(date).multipliedBy((new BigNumber(getMonthDiff(startDate, prePayStartDate))).minus(new BigNumber(1))).toNumber());
     if (prePayType === 1) {
       prePayParams.amount1 = amount1.minus(amount1.dividedBy(date).multipliedBy((new BigNumber(getMonthDiff(startDate, prePayStartDate))).minus(new BigNumber(1)))).minus(prePayAmount);;
       prePayParams.amount2 = amount2;
