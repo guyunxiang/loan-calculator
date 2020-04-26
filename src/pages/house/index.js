@@ -284,6 +284,7 @@ class Loan extends React.Component {
       return {
         interestTotal,
         hadBackInterest,
+        hadBackDate,
       };
     }
     // 计算提前还款后，需要还的利息总额
@@ -298,6 +299,7 @@ class Loan extends React.Component {
       };
     }
     return {
+      hadBackDate: getOldLoanData().hadBackDate,
       hadBackInterest: getOldLoanData().hadBackInterest,
       debjInterestDiff: getOldLoanData().interestTotal.minus(getOldLoanData().hadBackInterest).minus(getNewLoanData().interestTotal),
     }
@@ -343,7 +345,7 @@ class Loan extends React.Component {
           style={{ textAlign: 'left' }}
           renderItem={item => (
             <List.Item className={styles.listItem}>
-              <strong>{item.label}: </strong><span>{item.value}</span>
+              <span>{item.label}: </span><strong>{item.value}</strong>
             </List.Item>
           )}
         />
@@ -379,17 +381,58 @@ class Loan extends React.Component {
           style={{ textAlign: 'left' }}
           renderItem={item => (
             <List.Item className={styles.listItem}>
-              <strong>{item.label}: </strong><span>{item.value}</span>
+              <span>{item.label}: </span><strong>{item.value}</strong>
             </List.Item>
           )}
         />
       )
     }
 
+    // 渲染组合贷款信息
+    const renderTotalList = () => {
+      const loanData1 = this.getLoanData(amount1, date, rate1);
+      const loanData2 = this.getLoanData(amount2, date, rate2);
+      let capital, capitalTotal, interestTotal;
+      try {
+        capital = (loanData1.debxData.capital).plus(loanData2.debxData.capital);
+        capitalTotal = (loanData1.debxData.capitalTotal).plus(loanData2.debxData.capitalTotal);
+        interestTotal = (loanData1.debxData.interestTotal).plus(loanData2.debxData.interestTotal);
+      } catch (e) {
+      }
+      return (
+        <List
+          header={<strong>组合贷款</strong>}
+          dataSource={[
+            {
+              label: '每月月供(元)',
+              value: toFixed(capital.toNumber()),
+            },
+            {
+              label: '支付总利息(元)',
+              value: new BigNumber(toFixed(interestTotal.toNumber())).toFormat(),
+            },
+            {
+              label: '总还款额(元)',
+              value: new BigNumber(toFixed(capitalTotal.toNumber())).toFormat(),
+            },
+          ]}
+          style={{ textAlign: 'left' }}
+          renderItem={item => (
+            <List.Item className={styles.listItem}>
+              <span>{item.label}: </span><strong>{item.value}</strong>
+            </List.Item>
+          )}
+        />
+      )
+    }
+
+    renderTotalList(amount1, amount2, date, rate1, rate2);
+
     return (
       <div className={styles.tabpan}>
         {type !== 2 ? renderSDList(amount1, date, rate1) : null}
         {type !== 1 ? renderGJJDList(amount2, date, rate2) : null}
+        {type === 3 ? renderTotalList() : null}
       </div>
     )
   }
@@ -421,6 +464,7 @@ class Loan extends React.Component {
         dataIndex: 'date',
         key: 'date',
         align: 'center',
+        fixed: document.body.clientWidth < 768,
       },
       {
         title: '月供',
@@ -490,12 +534,13 @@ class Loan extends React.Component {
             style={{ textAlign: 'left' }}
             renderItem={item => (
               <List.Item className={styles.listItem}>
-                <strong>{item.label}: </strong><span>{item.value}</span>
+                <span>{item.label}: </span><strong>{item.value}</strong>
               </List.Item>
             )}
           />
           <br/>
           <Table
+            size={document.body.clientWidth < 768 ? 'small' : 'default'}
             columns={columns}
             rowKey="date"
             dataSource={list}
@@ -554,12 +599,13 @@ class Loan extends React.Component {
             style={{ textAlign: 'left' }}
             renderItem={item => (
               <List.Item className={styles.listItem}>
-                <strong>{item.label}: </strong><span>{item.value}</span>
+                <span>{item.label}: </span><strong>{item.value}</strong>
               </List.Item>
             )}
           />
           <br/>
           <Table
+            size={document.body.clientWidth < 768 ? 'small' : 'default'}
             columns={columns}
             rowKey="date"
             dataSource={list}
@@ -629,12 +675,13 @@ class Loan extends React.Component {
             style={{ textAlign: 'left' }}
             renderItem={item => (
               <List.Item className={styles.listItem}>
-                <strong>{item.label}: </strong><span>{item.value}</span>
+                <span>{item.label}: </span><strong>{item.value}</strong>
               </List.Item>
             )}
           />
           <br/>
           <Table
+            size={document.body.clientWidth < 768 ? 'small' : 'default'}
             columns={[
               {
                 title: '日期',
@@ -714,21 +761,17 @@ class Loan extends React.Component {
     if (prePayAmount.toNumber() === 0) {
       return (
         <div>
-          <Card>
-            <Collapse defaultActiveKey={['1']}>
-              <Panel header="等额本息" key="1">
-                {this.renderTabPan1(this.state)}
-              </Panel>
-            </Collapse>
-          </Card>
+          <Collapse defaultActiveKey={['1']}>
+            <Panel header="等额本息" key="1">
+              {this.renderTabPan1(this.state)}
+            </Panel>
+          </Collapse>
           <br/>
-          <Card>
-            <Collapse>
-              <Panel header="等额本金" key="2">
-                {this.renderTabPan2(this.state)}
-              </Panel>
-            </Collapse>
-          </Card>
+          <Collapse defaultActiveKey={['2']}>
+            <Panel header="等额本金" key="2">
+              {this.renderTabPan2(this.state)}
+            </Panel>
+          </Collapse>
           <br/>
         </div>
       );
@@ -751,87 +794,89 @@ class Loan extends React.Component {
     // 已还期数 new BigNumber(getMonthDiff(startDate, prePayStartDate))).minus(new BigNumber(1))
     // console.log(amount1.dividedBy(date).multipliedBy((new BigNumber(getMonthDiff(startDate, prePayStartDate))).minus(new BigNumber(1))).toNumber());
     if (prePayType === 1) {
-      prePayParams.amount1 = amount1.minus(amount1.dividedBy(date).multipliedBy((new BigNumber(getMonthDiff(startDate, prePayStartDate))).minus(new BigNumber(1)))).minus(prePayAmount);;
+      prePayParams.amount1 = amount1.minus(amount1.dividedBy(date).multipliedBy((new BigNumber(getMonthDiff(startDate, prePayStartDate))))).minus(prePayAmount);;
       prePayParams.amount2 = amount2;
     } else if (prePayType === 2) {
       prePayParams.amount1 = amount1;
-      prePayParams.amount2 = amount2.minus(amount2.dividedBy(date).multipliedBy((new BigNumber(getMonthDiff(startDate, prePayStartDate))).minus(new BigNumber(1)))).minus(prePayAmount);;
+      prePayParams.amount2 = amount2.minus(amount2.dividedBy(date).multipliedBy((new BigNumber(getMonthDiff(startDate, prePayStartDate))))).minus(prePayAmount);;
     }
 
     // 提前还款等额本金利息差
     const {
+      hadBackDate,
       hadBackInterest,
       debjInterestDiff,
     } = this.getDEBJInterestDiff(this.state, prePayParams);
 
     return (
       <div>
-        <Card>
-          <Collapse>
-            <Panel header="等额本息" key="1">
-              {this.renderTabPan1(this.state)}
-            </Panel>
-          </Collapse>
-        </Card>
+        <Collapse defaultActiveKey={['1']}>
+          <Panel header="等额本息" key="1">
+            {this.renderTabPan1(this.state)}
+          </Panel>
+        </Collapse>
         <br/>
-        <Card>
-          <Collapse>
-            <Panel header="等额本金" key="2">
-              {this.renderTabPan2(this.state)}
-            </Panel>
-          </Collapse>
-        </Card>
-        <Divider />
-        <h2>提前还款</h2>
+        <Collapse defaultActiveKey={['2']}>
+          <Panel header="等额本金" key="2">
+            {this.renderTabPan2(this.state)}
+          </Panel>
+        </Collapse>
+        <Divider>提前还款 - 分割线</Divider>
         <Card title="提前还款">
-          <List
-            header={<strong>剩余还款信息</strong>}
-            dataSource={[
-              {
-                label: '提前还款类型',
-                value: prePayType === 1 ? '商业贷款' : '公积金贷款',
-              },
-              {
-                label: '剩余还贷金额',
-                value: toFixed(prePayType === 1 ? prePayParams.amount1.toNumber() : prePayParams.amount2.toNumber()),
-              },
-              {
-                label: '剩余还贷期数',
-                value: `${parseInt(prePayParams.date.dividedBy(12).toNumber(), 10)}年${prePayParams.date.modulo(12).toNumber()}月`,
-              },
-              {
-                label: '等额本金已经还利息',
-                value: new BigNumber(toFixed(hadBackInterest.toNumber())).toFormat(),
-              },
-              {
-                label: '等额本金利息少还金额',
-                value: new BigNumber(toFixed(debjInterestDiff.toNumber())).toFormat(),
-              }
-            ]}
-            style={{ textAlign: 'left' }}
-            renderItem={item => (
-              <List.Item className={styles.listItem}>
-                <strong>{item.label}: </strong><span>{item.value}</span>
-              </List.Item>
-            )}
-          />
+          <div className={styles.prePayResultContent}>
+            <List
+              header={<strong>剩余还款信息</strong>}
+              dataSource={[
+                {
+                  label: '提前还款类型',
+                  value: prePayType === 1 ? '商业贷款' : '公积金贷款',
+                },
+                {
+                  label: '已还期数',
+                  value: `${parseInt(hadBackDate.dividedBy(12).toNumber(), 10)}年${hadBackDate.modulo(12).toNumber()}月`,
+                },
+                {
+                  label: '已还本金',
+                  value: new BigNumber(toFixed(amount1.minus(prePayParams.amount1).minus(prePayAmount).toNumber())).toFormat(),
+                },
+                {
+                  label: '剩余还贷期数',
+                  value: `${parseInt(prePayParams.date.dividedBy(12).toNumber(), 10)}年${prePayParams.date.modulo(12).toNumber()}月`,
+                },
+                {
+                  label: '剩余还贷金额',
+                  value: new BigNumber(toFixed(prePayType === 1 ? prePayParams.amount1.toNumber() : prePayParams.amount2.toNumber())).toFormat(),
+                },
+                {
+                  label: '等额本金已经还利息',
+                  value: new BigNumber(toFixed(hadBackInterest.toNumber())).toFormat(),
+                },
+                {
+                  label: '等额本金利息少还金额',
+                  value: new BigNumber(toFixed(debjInterestDiff.toNumber())).toFormat(),
+                }
+              ]}
+              style={{ textAlign: 'left' }}
+              renderItem={item => (
+                <List.Item className={styles.listItem}>
+                  <span>{item.label}: </span><strong>{item.value}</strong>
+                </List.Item>
+              )}
+            />
+          </div>
         </Card>
         <br/>
-        <Card>
-          <Collapse>
-            <Panel header="等额本息" key="1">
-              {this.renderTabPan1(prePayParams)}
-            </Panel>
-          </Collapse>
-        </Card>
+        <Collapse defaultActiveKey={['1']}>
+          <Panel header="等额本息" key="1">
+            {this.renderTabPan1(prePayParams)}
+          </Panel>
+        </Collapse>
         <br/>
-        <Card>
-          <Collapse>
-            <Panel header="等额本金" key="2">
-              {this.renderTabPan2(prePayParams)}
-            </Panel>
-          </Collapse>
-        </Card>
+        <Collapse defaultActiveKey={['2']}>
+          <Panel header="等额本金" key="2">
+            {this.renderTabPan2(prePayParams)}
+          </Panel>
+        </Collapse>
       </div>
     )
   }
@@ -870,7 +915,17 @@ class Loan extends React.Component {
             <Form.Item label="商业贷款金额" required>
               {
                 getFieldDecorator('amount1', {
-                  rules: [{ required: true, message: '请输入贷款金额！' }],
+                  rules: [
+                    {
+                      validator: (rule, value, callback) => {
+                        if (+value <= 0) {
+                          callback('请输入贷款金额!');
+                        } else {
+                          callback();
+                        }
+                      }
+                    }
+                  ],
                   initialValue: +DEFAULTVALUES.amount1,
                 })(
                   <Input
@@ -887,7 +942,17 @@ class Loan extends React.Component {
             <Form.Item label="公积金贷款金额" required>
               {
                 getFieldDecorator('amount2', {
-                  rules: [{ required: true, message: '请输入贷款金额！' }],
+                  rules: [
+                    {
+                      validator: (rule, value, callback) => {
+                        if (+value <= 0) {
+                          callback('请输入贷款金额!');
+                        } else {
+                          callback();
+                        }
+                      }
+                    }
+                  ],
                   initialValue: +DEFAULTVALUES.amount2,
                 })(
                   <Input
@@ -902,6 +967,19 @@ class Loan extends React.Component {
         <Form.Item label="贷款年数" required>
           {
             getFieldDecorator('date', {
+              rules: [
+                {
+                  validator: (rule, value, callback) => {
+                    if (+value <= 0) {
+                      callback('请输入贷款年限');
+                    } else if (`${value}`.indexOf('.') > -1){
+                      callback('请输入整数!');
+                    } else {
+                      callback();
+                    }
+                  }
+                }
+              ],
               initialValue: +DEFAULTVALUES.date,
             })(
               <Input
@@ -980,7 +1058,7 @@ class Loan extends React.Component {
   renderPreHouseLoanForm() {
     const {
       getFieldValue,
-      getFieldDecorator
+      getFieldDecorator,
     } = this.props.form;
     const { date, startDate } = this.state;
     if (!date.toNumber()) { return null }
@@ -991,8 +1069,8 @@ class Loan extends React.Component {
     } catch (e) {
     }
     return (
-      <div>
-        <Divider />
+      <div className={styles.prePayContent}>
+        <Divider>提前还款 - 分割线</Divider>
         <h3>提前还款</h3>
         <Form
           layout="vertical"
@@ -1029,7 +1107,19 @@ class Loan extends React.Component {
           <Form.Item label="金额" required>
             {
               getFieldDecorator('prePayAmount', {
-                rules: [{ required: true, message: '请输入还款金额！' }],
+                rules: [
+                  {
+                    validator: (rule, value, callback) => {
+                      if (+value <= 0) {
+                        callback('请输入提前还款金额！');
+                      } else if (`${value}`.indexOf('.') > -1){
+                        callback('请输入整数!');
+                      } else {
+                        callback();
+                      }
+                    }
+                  }
+                ],
                 initialValue: 10,
               })(
                 <Input
@@ -1042,7 +1132,19 @@ class Loan extends React.Component {
           <Form.Item label="贷款年数" required>
             {
               getFieldDecorator('prePayDate', {
-                rules: [{ required: true, message: '请输入还贷年数！' }],
+                rules: [
+                  {
+                    validator: (rule, value, callback) => {
+                      if (+value <= 0) {
+                        callback('请输入贷款年限!');
+                      } else if (`${value}`.indexOf('.') > -1){
+                        callback('请输入整数!');
+                      } else {
+                        callback();
+                      }
+                    }
+                  }
+                ],
                 initialValue: date.toNumber()/12 - 3,
               })(
                 <Input
@@ -1068,15 +1170,19 @@ class Loan extends React.Component {
 
   render() {
     return (
-      <Row gutter={16}>
-        <Col md={{ span: 8 }}>
-          {this.renderHouseLoanForm()}
-          {this.renderPreHouseLoanForm()}
-        </Col>
-        <Col md={{ span: 16 }}>
-          {this.renderResult()}
-        </Col>
-      </Row>
+      <div className={styles.house}>
+        <h2>房贷计算器</h2>
+        <Divider />
+        <Row gutter={16}>
+          <Col md={{ span: 8 }}>
+            {this.renderHouseLoanForm()}
+            {this.renderPreHouseLoanForm()}
+          </Col>
+          <Col md={{ span: 16 }}>
+            {this.renderResult()}
+          </Col>
+        </Row>
+      </div>
     );
   }
 }

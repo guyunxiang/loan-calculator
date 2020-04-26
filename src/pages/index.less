@@ -1,0 +1,81 @@
+.card {
+  width: 100%;
+  background-color: #fcfcfc;
+}
+
+@media screen and (min-width: 768px) {
+  .normal {
+    padding: 20px;
+    h2 {
+      margin-bottom: 24px;
+    }
+    &__enter {
+      ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        li {
+          margin-bottom: 20px;
+          a {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 108px;
+            border-radius: 8px;
+            border: 1px solid #d8d8d8;
+            font-size: 16px;
+            i {
+              margin-right: 8px;
+            }
+            &:hover {
+              box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.1);
+            }
+          }
+          &.comingsoon {
+            a::after {
+              content: '(敬请期待...)';
+              margin-left: 10px;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@media screen and (max-width: 767px) {
+  .normal {
+    padding: 16px;
+    &__enter {
+      h2 {
+        margin-bottom: 16px;
+      }
+      ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        li {
+          margin-bottom: 16px;
+          a {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 88px;
+            border-radius: 8px;
+            border: 1px solid #d8d8d8;
+            font-size: 16px;
+            i {
+              margin-right: 8px;
+            }
+          }
+          &.comingsoon {
+            a::after {
+              content: '(敬请期待...)';
+              margin-left: 10px;
+            }
+          }
+        }
+      }
+    }
+  }
+}

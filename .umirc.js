@@ -1,3 +1,4 @@
+const path = require('path');
 
 // ref: https://umijs.org/config/
 export default {
@@ -6,6 +7,13 @@ export default {
   outputPath: 'docs',
   base: '/loan-calculator',
   publicPath: '/loan-calculator/',
+
+  alias: {
+    '@assets': path.resolve(__dirname, './src/assets'),
+    '@components': path.resolve(__dirname, './src/components'),
+    '@utils': path.resolve(__dirname, './src/utils'),
+    '@services': path.resolve(__dirname, './src/services'),
+  },
 
   plugins: [
     // ref: https://umijs.org/plugin/umi-plugin-react.html
