@@ -49,11 +49,13 @@ class Loan extends React.Component {
     rate1: new BigNumber(1),
     // 公积金贷款利率
     rate2: new BigNumber(1),
+    // 起始日期
+    startDate: new Date(),
 
     // 提前还款类型
     prePayType: 1,
     // 提前还款日期
-    prePayDate: '',
+    prePayStartDate: '',
     // 提前还款金额
     prePayAmount: new BigNumber(0),
   }
@@ -121,7 +123,8 @@ class Loan extends React.Component {
       if (err) { return }
       this.setState({
         prePayType: values.prePayType,
-        prePayDate: moment(values.prePayDate).format('YYYY/MM'),
+        prePayDate: new BigNumber(values.prePayDate).multipliedBy(12),
+        prePayStartDate: moment(values.prePayStartDate).format('YYYY/MM'),
         prePayAmount: new BigNumber(values.prePayAmount).multipliedBy(10000),
       });
     });
@@ -259,10 +262,7 @@ class Loan extends React.Component {
 
   // 获取等额本金利息差
   getDEBJInterestDiff = ({ ...props }, { ...prePayParams }) => {
-    const {
-      date,
-      startDate,
-    } = props;
+    const { date, startDate } = props;
     const type = +this.props.form.getFieldValue('prePayType');
     // 计算原贷款，剩余未还的利息
     const getOldLoanData = () => {
@@ -275,7 +275,7 @@ class Loan extends React.Component {
       // 已还的利息
       let hadBackInterest = new BigNumber(0);
       // 已还期数
-      const hadBackDate = date.minus(prePayParams.date);
+      let hadBackDate = new BigNumber(getMonthDiff(props.startDate, prePayParams.startDate));
       // 计算已还利息总额
       for (let i = 0; i < hadBackDate.toNumber(); i++) {
         hadBackInterest = hadBackInterest.plus(list[i].interest);
@@ -412,7 +412,7 @@ class Loan extends React.Component {
       rate2,
       startDate,
 
-      prePayDate,
+      prePayStartDate,
     } = props;
 
     const columns = [
@@ -500,7 +500,7 @@ class Loan extends React.Component {
             rowKey="date"
             dataSource={list}
             rowClassName={(record) => {
-              if (new Date(record.date).getTime() > new Date(prePayDate).getTime()) {
+              if (new Date(record.date).getTime() > new Date(prePayStartDate).getTime()) {
                 return 'disabled';
               }
             }}
@@ -564,7 +564,7 @@ class Loan extends React.Component {
             rowKey="date"
             dataSource={list}
             rowClassName={(record) => {
-              if (new Date(record.date).getTime() > new Date(prePayDate).getTime()) {
+              if (new Date(record.date).getTime() > new Date(prePayStartDate).getTime()) {
                 return 'disabled';
               }
             }}
@@ -707,6 +707,7 @@ class Loan extends React.Component {
 
       prePayType,
       prePayDate,
+      prePayStartDate,
       prePayAmount,
     } = this.state;
 
@@ -739,18 +740,22 @@ class Loan extends React.Component {
       rate2,
     };
     // 计算剩余贷款期数
-    prePayParams.date = date.minus(new BigNumber(getMonthDiff(startDate, prePayDate)));
+    prePayParams.date = prePayDate;
     // 还贷类型
     prePayParams.type = prePayType;
     // 计算提前还款后的还贷初始日期
-    prePayParams.startDate = `${prePayDate}/${startDate.split('/')[2]}`;
+    prePayParams.startDate = `${prePayStartDate}/${startDate.split('/')[2]}`;
     // 计算提前还款后剩余的本金，剩余还款金额 = 贷款额 - 每月还款本金 * 已还期数 - 提前还款额
+    // 贷款额 amount1
+    // 每月还款本金 amount1.dividedBy(date)
+    // 已还期数 new BigNumber(getMonthDiff(startDate, prePayStartDate))).minus(new BigNumber(1))
+    console.log(amount1.dividedBy(date).multipliedBy((new BigNumber(getMonthDiff(startDate, prePayStartDate))).minus(new BigNumber(1))).toNumber());
     if (prePayType === 1) {
-      prePayParams.amount1 = amount1.minus(amount1.dividedBy(date).multipliedBy(date.minus(prePayParams.date).minus(new BigNumber(1)))).minus(prePayAmount);;
+      prePayParams.amount1 = amount1.minus(amount1.dividedBy(date).multipliedBy((new BigNumber(getMonthDiff(startDate, prePayStartDate))).minus(new BigNumber(1)))).minus(prePayAmount);;
       prePayParams.amount2 = amount2;
     } else if (prePayType === 2) {
       prePayParams.amount1 = amount1;
-      prePayParams.amount2 = amount2.minus(amount2.dividedBy(date).multipliedBy(date.minus(prePayParams.date).minus(new BigNumber(1)))).minus(prePayAmount);;
+      prePayParams.amount2 = amount2.minus(amount2.dividedBy(date).multipliedBy((new BigNumber(getMonthDiff(startDate, prePayStartDate))).minus(new BigNumber(1)))).minus(prePayAmount);;
     }
 
     // 提前还款等额本金利息差
@@ -831,207 +836,242 @@ class Loan extends React.Component {
     )
   }
 
-  render() {
+  // 渲染房贷计算表单
+  renderHouseLoanForm() {
     const {
       getFieldValue,
       getFieldDecorator
     } = this.props.form;
     const DEFAULTVALUES = this.getDefaultValues();
     const type = getFieldValue('type') || DEFAULTVALUES.type;
-    const { date } = this.state;
+
     return (
-      <Row gutter={16}>
-        <Col md={{ span: 8 }}>
-          <Form
-            layout="vertical"
-            onSubmit={this.handleSubmit}
-          >
-            <Form.Item label="贷款类型">
+      <Form
+        layout="vertical"
+        onSubmit={this.handleSubmit}
+      >
+        <Form.Item label="贷款类型">
+          {
+            getFieldDecorator('type', {
+              initialValue: DEFAULTVALUES.type,
+            })(
+              <Radio.Group>
+                {
+                  loanOptions.map((item) => (
+                    <Radio key={item.value} value={item.value}>{item.label}</Radio>
+                  ))
+                }
+              </Radio.Group>
+            )
+          }
+        </Form.Item>
+        {
+          type !== 2 ? (
+            <Form.Item label="商业贷款金额" required>
               {
-                getFieldDecorator('type', {
-                  initialValue: DEFAULTVALUES.type,
-                })(
-                  <Radio.Group>
-                    {
-                      loanOptions.map((item) => (
-                        <Radio key={item.value} value={item.value}>{item.label}</Radio>
-                      ))
-                    }
-                  </Radio.Group>
-                )
-              }
-            </Form.Item>
-            {
-              type !== 2 ? (
-                <Form.Item label="商业贷款金额" required>
-                  {
-                    getFieldDecorator('amount1', {
-                      rules: [{ required: true, message: '请输入贷款金额！' }],
-                      initialValue: +DEFAULTVALUES.amount1,
-                    })(
-                      <Input
-                        type="number"
-                        addonAfter="万元"
-                      />
-                    )
-                  }
-                </Form.Item>
-              ) : null
-            }
-            {
-              type !== 1 ? (
-                <Form.Item label="公积金贷款金额" required>
-                  {
-                    getFieldDecorator('amount2', {
-                      rules: [{ required: true, message: '请输入贷款金额！' }],
-                      initialValue: +DEFAULTVALUES.amount2,
-                    })(
-                      <Input
-                        type="number"
-                        addonAfter="万元"
-                      />
-                    )
-                  }
-                </Form.Item>
-              ) : null
-            }
-            <Form.Item label="贷款年数" required>
-              {
-                getFieldDecorator('date', {
-                  initialValue: +DEFAULTVALUES.date,
+                getFieldDecorator('amount1', {
+                  rules: [{ required: true, message: '请输入贷款金额！' }],
+                  initialValue: +DEFAULTVALUES.amount1,
                 })(
                   <Input
                     type="number"
-                    addonAfter="年数"
+                    addonAfter="万元"
                   />
                 )
               }
             </Form.Item>
-            {
-              type !== 2 ? (
-                <Form.Item label="商业贷款利率" required>
-                  {
-                    getFieldDecorator('rate1', {
-                      initialValue: +DEFAULTVALUES.rate1,
-                    })(
-                      <Select>
-                        {
-                          rate1Options.map((item) => (
-                            <Option value={item.value} key={item.value}>{item.label}</Option>
-                          ))
-                        }
-                      </Select>
-                    )
-                  }
-                </Form.Item>
-              ) : null
-            }
-            {
-              type !== 1 ? (
-                <Form.Item label="公积金贷款利率" required>
-                  {
-                    getFieldDecorator('rate2', {
-                      initialValue: +DEFAULTVALUES.rate2,
-                    })(
-                      <Select>
-                        {
-                          rate2Options.map((item) => (
-                            <Option value={item.value} key={item.value}>{item.label}</Option>
-                          ))
-                        }
-                      </Select>
-                    )
-                  }
-                </Form.Item>
-              ) : null
-            }
-            <Form.Item label="贷款通过日期" required>
+          ) : null
+        }
+        {
+          type !== 1 ? (
+            <Form.Item label="公积金贷款金额" required>
               {
-                getFieldDecorator('startDate', {
-                  initialValue: moment(DEFAULTVALUES.startDate),
+                getFieldDecorator('amount2', {
+                  rules: [{ required: true, message: '请输入贷款金额！' }],
+                  initialValue: +DEFAULTVALUES.amount2,
                 })(
-                  <DatePicker
+                  <Input
                     type="number"
-                    format="YYYY/MM/DD"
-                    placeholder="请选择贷款初始日期"
-                    style={{ width: '100%' }}
+                    addonAfter="万元"
                   />
                 )
               }
             </Form.Item>
-            <Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                style={{ width: '100%' }}
-              >
-                计算月供
-              </Button>
-            </Form.Item>
-          </Form>
+          ) : null
+        }
+        <Form.Item label="贷款年数" required>
           {
-            date.toNumber() ? (
-              <div>
-                <Divider />
-                <h3>提前还款</h3>
-                <Form
-                  layout="vertical"
-                  onSubmit={this.handleSubmitPrePay}
-                >
-                  <Form.Item label="还贷类型">
-                    {
-                      getFieldDecorator('prePayType', {
-                        initialValue: getFieldValue('type') !== 3 ? getFieldValue('type') : 1,
-                      })(
-                        <Radio.Group>
-                          {
-                            loanOptions.filter((item) => item.value !== 3).map((item) => (
-                              <Radio key={item.value} value={item.value}>{item.label}</Radio>
-                            ))
-                          }
-                        </Radio.Group>
-                      )
-                    }
-                  </Form.Item>
-                  <Form.Item label="日期" required>
-                    {
-                      getFieldDecorator('prePayDate', {
-                        initialValue: moment('2021/07/18'),
-                      })(
-                        <MonthPicker
-                          placeholder="请选择提前还款日期"
-                          style={{ width: '100%' }}
-                          disabledDate={(current) => current && current < moment(this.state.startDate).endOf('day')}
-                        />
-                      )
-                    }
-                  </Form.Item>
-                  <Form.Item label="金额" required>
-                    {
-                      getFieldDecorator('prePayAmount', {
-                        rules: [{ required: true, message: '请输入还款金额！' }],
-                        initialValue: 10,
-                      })(
-                        <Input
-                          type="number"
-                          addonAfter="万元"
-                        />
-                      )
-                    }
-                  </Form.Item>
-                  <Form.Item>
-                    <Button
-                      type="primary"
-                      htmlType="submit"
-                      style={{ width: '100%' }}
-                    >
-                      计算提前还款
-                    </Button>
-                  </Form.Item>
-                </Form>
-              </div>
-            ) : null
+            getFieldDecorator('date', {
+              initialValue: +DEFAULTVALUES.date,
+            })(
+              <Input
+                type="number"
+                addonAfter="年数"
+              />
+            )
           }
+        </Form.Item>
+        {
+          type !== 2 ? (
+            <Form.Item label="商业贷款利率" required>
+              {
+                getFieldDecorator('rate1', {
+                  initialValue: +DEFAULTVALUES.rate1,
+                })(
+                  <Select>
+                    {
+                      rate1Options.map((item) => (
+                        <Option value={item.value} key={item.value}>{item.label}</Option>
+                      ))
+                    }
+                  </Select>
+                )
+              }
+            </Form.Item>
+          ) : null
+        }
+        {
+          type !== 1 ? (
+            <Form.Item label="公积金贷款利率" required>
+              {
+                getFieldDecorator('rate2', {
+                  initialValue: +DEFAULTVALUES.rate2,
+                })(
+                  <Select>
+                    {
+                      rate2Options.map((item) => (
+                        <Option value={item.value} key={item.value}>{item.label}</Option>
+                      ))
+                    }
+                  </Select>
+                )
+              }
+            </Form.Item>
+          ) : null
+        }
+        <Form.Item label="贷款通过日期" required>
+          {
+            getFieldDecorator('startDate', {
+              initialValue: moment(DEFAULTVALUES.startDate),
+            })(
+              <DatePicker
+                type="number"
+                format="YYYY/MM/DD"
+                placeholder="请选择贷款初始日期"
+                style={{ width: '100%' }}
+              />
+            )
+          }
+        </Form.Item>
+        <Form.Item>
+          <Button
+            type="primary"
+            htmlType="submit"
+            style={{ width: '100%' }}
+          >
+            计算月供
+          </Button>
+        </Form.Item>
+      </Form>
+    )
+  }
+
+  // 渲染房贷提前还款计算
+  renderPreHouseLoanForm() {
+    const {
+      getFieldValue,
+      getFieldDecorator
+    } = this.props.form;
+    const { date, startDate } = this.state;
+    if (!date.toNumber()) { return null }
+    let prePayStartDate;
+    try {
+      let [year, month, day] = startDate.split('/');
+      prePayStartDate = `${+year + 3}/${month}/${day}`;
+    } catch (e) {
+    }
+    return (
+      <div>
+        <Divider />
+        <h3>提前还款</h3>
+        <Form
+          layout="vertical"
+          onSubmit={this.handleSubmitPrePay}
+        >
+          <Form.Item label="还贷类型">
+            {
+              getFieldDecorator('prePayType', {
+                initialValue: getFieldValue('type') !== 3 ? getFieldValue('type') : 1,
+              })(
+                <Radio.Group>
+                  {
+                    loanOptions.filter((item) => item.value !== 3).map((item) => (
+                      <Radio key={item.value} value={item.value}>{item.label}</Radio>
+                    ))
+                  }
+                </Radio.Group>
+              )
+            }
+          </Form.Item>
+          <Form.Item label="日期" required>
+            {
+              getFieldDecorator('prePayStartDate', {
+                initialValue: moment(prePayStartDate),
+              })(
+                <MonthPicker
+                  placeholder="请选择提前还款日期"
+                  style={{ width: '100%' }}
+                  disabledDate={(current) => current && current < moment(this.state.startDate).endOf('day')}
+                />
+              )
+            }
+          </Form.Item>
+          <Form.Item label="金额" required>
+            {
+              getFieldDecorator('prePayAmount', {
+                rules: [{ required: true, message: '请输入还款金额！' }],
+                initialValue: 10,
+              })(
+                <Input
+                  type="number"
+                  addonAfter="万元"
+                />
+              )
+            }
+          </Form.Item>
+          <Form.Item label="贷款年数" required>
+            {
+              getFieldDecorator('prePayDate', {
+                rules: [{ required: true, message: '请输入还贷年数！' }],
+                initialValue: date.toNumber()/12 - 3,
+              })(
+                <Input
+                  type="number"
+                  addonAfter="年数"
+                />
+              )
+            }
+          </Form.Item>
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              style={{ width: '100%' }}
+            >
+              计算提前还款
+            </Button>
+          </Form.Item>
+        </Form>
+      </div>
+    )
+  }
+
+  render() {
+    return (
+      <Row gutter={16}>
+        <Col md={{ span: 8 }}>
+          {this.renderHouseLoanForm()}
+          {this.renderPreHouseLoanForm()}
         </Col>
         <Col md={{ span: 16 }}>
           {this.renderResult()}
