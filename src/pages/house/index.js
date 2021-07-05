@@ -63,12 +63,12 @@ class Loan extends React.Component {
   getDefaultValues = () => {
     let defaultValues = {
       type: 1,
-      amount1: 0, // 96.7
-      amount2: 0, // 34.7
+      amount1: 0,
+      amount2: 0,
       date: 0,    // 30
       rate1: DEFAULTRATE1,   // 5.39
       rate2: DEFAULTRATE2,   // 3.25
-      startDate: moment(new Date()).format('YYYY/MM/DD'), // 2018/07-18
+      startDate: moment(new Date()).format('YYYY/MM/DD'),
     };
     try {
       const localData = JSON.parse(window.localStorage.getItem('defaultValues'));

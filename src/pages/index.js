@@ -19,7 +19,7 @@ class HomePage extends React.Component {
                 <Icon type="home" /> 房贷计算器
               </Link>
             </li>
-            <li className={styles.comingsoon}>
+            {/* <li className={styles.comingsoon}>
               <Link to="#">
                 <Icon type="carry-out" /> 月供计算器
               </Link>
@@ -28,7 +28,7 @@ class HomePage extends React.Component {
               <Link to="#">
                 <Icon type="pay-circle" /> 理财计算器
               </Link>
-            </li>
+            </li> */}
           </ul>
         </div>
       </div>
