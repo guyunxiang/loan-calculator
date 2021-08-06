@@ -11,8 +11,10 @@ import {
   Button,
   List,
   Table,
+  Tabs,
   Divider,
   Collapse,
+  Empty,
 } from 'antd';
 import BigNumber from 'bignumber.js';
 import moment from 'moment';
@@ -33,6 +35,7 @@ import styles from './index.less';
 
 const { Option } = Select;
 const { MonthPicker } = DatePicker;
+const { TabPane } = Tabs;
 
 class Loan extends React.Component {
 
@@ -96,6 +99,11 @@ class Loan extends React.Component {
     } catch (e) {
     }
     return defaultValues;
+  }
+
+  componentDidMount() {
+    const { type } = this.getDefaultValues();
+    this.setState({ type });
   }
 
   // 计算贷款
@@ -329,7 +337,7 @@ class Loan extends React.Component {
       } = this.getLoanData(amount, date, rate);
       return (
         <List
-          header={<strong>商业贷款</strong>}
+          header={<h3>商业贷款</h3>}
           dataSource={[
             {
               label: '每月月供(元)',
@@ -365,7 +373,7 @@ class Loan extends React.Component {
       } = this.getLoanData(amount, date, rate);
       return (
         <List
-          header={<strong>公积金贷款</strong>}
+          header={<h3>公积金贷款</h3>}
           dataSource={[
             {
               label: '每月月供(元)',
@@ -403,18 +411,34 @@ class Loan extends React.Component {
       }
       return (
         <List
-          header={<strong>组合贷款</strong>}
+          header={<h3>组合贷款</h3>}
           dataSource={[
             {
-              label: '每月月供(元)',
+              label: '月供组成(商业贷)',
+              value: toFixed(loanData1.debxData.capital.toNumber()),
+            },
+            {
+              label: '月供组成(公积金)',
+              value: toFixed(loanData2.debxData.capital.toNumber()),
+            },
+            {
+              label: <strong>月供总计(元)</strong>,
               value: toFixed(capital.toNumber()),
             },
             {
-              label: '支付总利息(元)',
+              label: '利息(商业贷)',
+              value: new BigNumber(toFixed(loanData1.debxData.interestTotal.toNumber())).toFormat(),
+            },
+            {
+              label: '利息(公积金)',
+              value: new BigNumber(toFixed(loanData2.debxData.interestTotal.toNumber())).toFormat(),
+            },
+            {
+              label: <strong>利息总计(元)</strong>,
               value: new BigNumber(toFixed(interestTotal.toNumber())).toFormat(),
             },
             {
-              label: '总还款额(元)',
+              label: '总还款额(本金+利息)',
               value: new BigNumber(toFixed(capitalTotal.toNumber())).toFormat(),
             },
           ]}
@@ -428,12 +452,16 @@ class Loan extends React.Component {
       )
     }
 
-    renderTotalList(amount1, amount2, date, rate1, rate2);
+    if (!date.toNumber()) {
+      return (
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
+      )
+    }
 
     return (
       <div className={styles.tabpan}>
-        {type !== 2 ? renderSDList(amount1, date, rate1) : null}
-        {type !== 1 ? renderGJJDList(amount2, date, rate2) : null}
+        {type === 1 ? renderSDList(amount1, date, rate1) : null}
+        {type === 2 ? renderGJJDList(amount2, date, rate2) : null}
         {type === 3 ? renderTotalList() : null}
       </div>
     )
@@ -506,7 +534,7 @@ class Loan extends React.Component {
       return (
         <div>
           <List
-            header={<strong>商业贷款</strong>}
+            header={<h3>商业贷款</h3>}
             dataSource={[
               {
                 label: '首月月供（元）',
@@ -571,7 +599,7 @@ class Loan extends React.Component {
       return (
         <div>
           <List
-            header={<strong>公积金贷款</strong>}
+            header={<h3>公积金贷款</h3>}
             dataSource={[
               {
                 label: '首月月供（元）',
@@ -647,10 +675,10 @@ class Loan extends React.Component {
       return (
         <div>
           <List
-            header={<strong>组合贷款</strong>}
+            header={<h3>组合贷款</h3>}
             dataSource={[
               {
-                label: '首月月供（元）',
+                label: '首月月供(元)',
                 value: toFixed(capital.toNumber() + interest.toNumber()),
               },
               {
@@ -734,10 +762,16 @@ class Loan extends React.Component {
       )
     }
 
+    if (!date.toNumber()) {
+      return (
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
+      )
+    }
+
     return (
       <div className={styles.tabpan}>
-        {type !== 2 ? renderSDList(amount1, date, rate1) : null}
-        {type !== 1 ? renderGJJDList(amount2, date, rate2) : null}
+        {type === 1 ? renderSDList(amount1, date, rate1) : null}
+        {type === 2 ? renderGJJDList(amount2, date, rate2) : null}
         {type === 3 ? renderTotalList() : null }
       </div>
     );
@@ -760,23 +794,18 @@ class Loan extends React.Component {
       prePayAmount,
     } = this.state;
 
+    // 未设置提前还款
     if (prePayAmount.toNumber() === 0) {
       return (
-        <div>
-          <Collapse defaultActiveKey={['1']}>
-            <Panel header="等额本息" key="1">
-              {this.renderTabPan1(this.state)}
-            </Panel>
-          </Collapse>
-          <br/>
-          <Collapse defaultActiveKey={['2']}>
-            <Panel header="等额本金" key="2">
-              {this.renderTabPan2(this.state)}
-            </Panel>
-          </Collapse>
-          <br/>
-        </div>
-      );
+        <Tabs defaultActiveKey="1">
+          <TabPane tab="等额本息" key="1">
+            {this.renderTabPan1(this.state)}
+          </TabPane>
+          <TabPane tab="等额本金" key="2">
+            {this.renderTabPan2(this.state)}
+          </TabPane>
+        </Tabs>
+      )
     }
 
     // 定义提前还款参数
