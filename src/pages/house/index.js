@@ -209,7 +209,11 @@ class Loan extends React.Component {
   getDEBXData = (amount, date, rate) => {
     // 总月数
     let monthNums = new BigNumber(0);
-    // 每月还款本金
+    // 月供本金
+    let principal = new BigNumber(0);
+    // 月供利息
+    let interest = new BigNumber(0);
+    // 总月供
     let capital = new BigNumber(0);
     // 总还款额
     let capitalTotal = new BigNumber(0);
@@ -222,14 +226,20 @@ class Loan extends React.Component {
       let a = rate.dividedBy(12).multipliedBy(rate.dividedBy(12).plus(1).exponentiatedBy(monthNums));
       // ((1+R)^N)-1
       let b = rate.dividedBy(12).plus(1).exponentiatedBy(monthNums).minus(1);
-      // amount*a/b
+      // 月供 = amount * a / b
       capital = amount.multipliedBy(a.dividedBy(b));
-      // 月供 * 月数
+      // 月供本金
+      principal = amount.dividedBy(date);
+      // 月供利息
+      interest = capital.minus(principal);
+      // 总还款额 = 月供 * 月数
       capitalTotal = capital.multipliedBy(monthNums);
-      // 总还款额 - 本金
+      // 总利息 = 总还款额 - 本金
       interestTotal = capitalTotal.minus(amount);
     }
     return {
+      principal,
+      interest,
       capital,
       capitalTotal,
       interestTotal,
@@ -331,6 +341,8 @@ class Loan extends React.Component {
       const {
         debxData: {
           capital,
+          principal,
+          interest,
           capitalTotal,
           interestTotal,
         }
@@ -340,16 +352,28 @@ class Loan extends React.Component {
           header={<h3>商业贷款</h3>}
           dataSource={[
             {
-              label: '每月月供(元)',
-              value: toFixed(capital.toNumber()),
+              label: '月供本金',
+              value: new BigNumber(toFixed(principal.toNumber())).toFormat(),
             },
             {
-              label: '支付总利息(元)',
-              value: new BigNumber(toFixed(interestTotal.toNumber())).toFormat(),
+              label: '月供利息',
+              value: new BigNumber(toFixed(interest.toNumber())).toFormat(),
             },
             {
-              label: '总还款额(元)',
-              value: new BigNumber(toFixed(capitalTotal.toNumber())).toFormat(),
+              label: '月供合计',
+              value: new BigNumber(toFixed(capital.toNumber())).toFormat(),
+            },
+            {
+              label: '贷款合计',
+              value: new BigNumber(toFixed(amount.toNumber())).toFormat(),
+            },
+            {
+              label: '利息合计',
+              value: new BigNumber(toFixed(interestTotal.toNumber())).toFormat()
+            },
+            {
+              label: <strong>总还款额(本金+利息)</strong>,
+              value: new BigNumber(toFixed(capitalTotal.toNumber())).toFormat()
             },
           ]}
           style={{ textAlign: 'left' }}
@@ -367,6 +391,8 @@ class Loan extends React.Component {
       const {
         debxData: {
           capital,
+          principal,
+          interest,
           capitalTotal,
           interestTotal,
         }
@@ -376,16 +402,28 @@ class Loan extends React.Component {
           header={<h3>公积金贷款</h3>}
           dataSource={[
             {
-              label: '每月月供(元)',
-              value: toFixed(capital.toNumber()),
+              label: '月供本金',
+              value: new BigNumber(toFixed(principal.toNumber())).toFormat(),
             },
             {
-              label: '支付总利息(元)',
-              value: new BigNumber(toFixed(interestTotal.toNumber())).toFormat(),
+              label: '月供利息',
+              value: new BigNumber(toFixed(interest.toNumber())).toFormat(),
             },
             {
-              label: '总还款额(元)',
-              value: new BigNumber(toFixed(capitalTotal.toNumber())).toFormat(),
+              label: '月供合计',
+              value: new BigNumber(toFixed(capital.toNumber())).toFormat(),
+            },
+            {
+              label: '贷款合计',
+              value: new BigNumber(toFixed(amount.toNumber())).toFormat(),
+            },
+            {
+              label: '利息合计',
+              value: new BigNumber(toFixed(interestTotal.toNumber())).toFormat()
+            },
+            {
+              label: <strong>总还款额(本金+利息)</strong>,
+              value: new BigNumber(toFixed(capitalTotal.toNumber())).toFormat()
             },
           ]}
           style={{ textAlign: 'left' }}
@@ -402,11 +440,19 @@ class Loan extends React.Component {
     const renderTotalList = () => {
       const loanData1 = this.getLoanData(amount1, date, rate1);
       const loanData2 = this.getLoanData(amount2, date, rate2);
-      let capital, capitalTotal, interestTotal;
+      let capital,
+          capitalTotal,
+          interestTotal,
+          loanTotal,
+          principalTotal,
+          interestTotalMonth;
       try {
+        principalTotal = (loanData1.debxData.principal).plus(loanData2.debxData.principal);
         capital = (loanData1.debxData.capital).plus(loanData2.debxData.capital);
         capitalTotal = (loanData1.debxData.capitalTotal).plus(loanData2.debxData.capitalTotal);
+        interestTotalMonth = (loanData1.debxData.interest).plus(loanData2.debxData.interest);
         interestTotal = (loanData1.debxData.interestTotal).plus(loanData2.debxData.interestTotal);
+        loanTotal = amount1.plus(amount2);
       } catch (e) {
       }
       return (
@@ -414,31 +460,84 @@ class Loan extends React.Component {
           header={<h3>组合贷款</h3>}
           dataSource={[
             {
-              label: '月供组成(商业贷)',
-              value: toFixed(loanData1.debxData.capital.toNumber()),
+              label: <strong>商业贷款</strong>,
             },
             {
-              label: '月供组成(公积金)',
-              value: toFixed(loanData2.debxData.capital.toNumber()),
+              label: '月供本金',
+              value: new BigNumber(toFixed(loanData1.debxData.principal.toNumber())).toFormat(),
             },
             {
-              label: <strong>月供总计(元)</strong>,
-              value: toFixed(capital.toNumber()),
+              label: '月供利息',
+              value: new BigNumber(toFixed(loanData1.debxData.interest.toNumber())).toFormat(),
             },
             {
-              label: '利息(商业贷)',
-              value: new BigNumber(toFixed(loanData1.debxData.interestTotal.toNumber())).toFormat(),
+              label: '月供合计',
+              value: new BigNumber(toFixed(loanData1.debxData.capital.toNumber())).toFormat(),
             },
             {
-              label: '利息(公积金)',
+              label: '贷款合计',
+              value: new BigNumber(toFixed(amount1.toNumber())).toFormat(),
+            },
+            {
+              label: '利息合计',
+              value: new BigNumber(toFixed(loanData1.debxData.interestTotal.toNumber())).toFormat()
+            },
+            {
+              label: <strong>总还款额(本金+利息)</strong>,
+              value: new BigNumber(toFixed(loanData1.debxData.capitalTotal.toNumber())).toFormat()
+            },
+            {
+              label: <strong>公积金贷款</strong>,
+            },
+            {
+              label: '月供本金',
+              value: new BigNumber(toFixed(loanData2.debxData.principal.toNumber())).toFormat(),
+            },
+            {
+              label: '月供利息',
+              value: new BigNumber(toFixed(loanData2.debxData.interest.toNumber())).toFormat(),
+            },
+            {
+              label: '月供合计',
+              value: new BigNumber(toFixed(loanData2.debxData.capital.toNumber())).toFormat(),
+            },
+            {
+              label: '贷款合计',
+              value: new BigNumber(toFixed(amount2.toNumber())).toFormat(),
+            },
+            {
+              label: '利息合计',
               value: new BigNumber(toFixed(loanData2.debxData.interestTotal.toNumber())).toFormat(),
             },
             {
-              label: <strong>利息总计(元)</strong>,
+              label: <strong>总还款额(本金+利息)</strong>,
+              value: new BigNumber(toFixed(loanData2.debxData.capitalTotal.toNumber())).toFormat()
+            },
+            {
+              label: <strong>组合贷合计</strong>
+            },
+            {
+              label: '月供本金',
+              value: new BigNumber(toFixed(principalTotal.toNumber())).toFormat(),
+            },
+            {
+              label: '月供利息',
+              value: new BigNumber(toFixed(interestTotalMonth.toNumber())).toFormat(),
+            },
+            {
+              label: '月供合计',
+              value: new BigNumber(toFixed(capital.toNumber())).toFormat(),
+            },
+            {
+              label: '贷款合计',
+              value: new BigNumber(toFixed(loanTotal.toNumber())).toFormat(),
+            },
+            {
+              label: '利息合计',
               value: new BigNumber(toFixed(interestTotal.toNumber())).toFormat(),
             },
             {
-              label: '总还款额(本金+利息)',
+              label: <strong>总还款额(本金+利息)</strong>,
               value: new BigNumber(toFixed(capitalTotal.toNumber())).toFormat(),
             },
           ]}
@@ -537,27 +636,31 @@ class Loan extends React.Component {
             header={<h3>商业贷款</h3>}
             dataSource={[
               {
-                label: '首月月供（元）',
-                value: toFixed(capital.toNumber() + interest.toNumber()),
+                label: '月供本金',
+                value: new BigNumber(toFixed(capital.toNumber())).toFormat(),
               },
               {
-                label: '月供本金(元)',
-                value: toFixed(capital.toNumber()),
+                label: '首月利息',
+                value: new BigNumber(toFixed(interest.toNumber())).toFormat(),
               },
               {
-                label: '首月利息(元)',
-                value: toFixed(interest.toNumber()),
+                label: '首月月供',
+                value: new BigNumber(toFixed(capital.plus(interest).toNumber())).toFormat()
               },
               {
-                label: '每月递减(元)',
-                value: toFixed(diff),
+                label: '每月递减',
+                value: new BigNumber(toFixed(diff.toNumber())).toFormat(),
               },
               {
-                label: '支付总利息(元)',
+                label: '贷款合计',
+                value: new BigNumber(toFixed(amount1.toNumber())).toFormat(),
+              },
+              {
+                label: '利息合计',
                 value: new BigNumber(toFixed(interestTotal.toNumber())).toFormat(),
               },
               {
-                label: '总还款额(元)',
+                label: <strong>总还款额(本金+利息)</strong>,
                 value: new BigNumber(toFixed(capitalTotal.toNumber())).toFormat(),
               },
             ]}
@@ -602,27 +705,31 @@ class Loan extends React.Component {
             header={<h3>公积金贷款</h3>}
             dataSource={[
               {
-                label: '首月月供（元）',
-                value: toFixed(capital.toNumber() + interest.toNumber()),
+                label: '月供本金',
+                value: new BigNumber(toFixed(capital.toNumber())).toFormat(),
               },
               {
-                label: '月供本金(元)',
-                value: toFixed(capital.toNumber()),
+                label: '首月利息',
+                value: new BigNumber(toFixed(interest.toNumber())).toFormat(),
               },
               {
-                label: '首月利息(元)',
-                value: toFixed(interest.toNumber()),
+                label: '首月月供',
+                value: new BigNumber(toFixed(capital.plus(interest).toNumber())).toFormat()
               },
               {
-                label: '每月递减(元)',
-                value: toFixed(diff),
+                label: '每月递减',
+                value: new BigNumber(toFixed(diff.toNumber())).toFormat(),
               },
               {
-                label: '支付总利息(元)',
+                label: '贷款合计',
+                value: new BigNumber(toFixed(amount1.toNumber())).toFormat(),
+              },
+              {
+                label: '利息合计',
                 value: new BigNumber(toFixed(interestTotal.toNumber())).toFormat(),
               },
               {
-                label: '总还款额(元)',
+                label: <strong>总还款额(本金+利息)</strong>,
                 value: new BigNumber(toFixed(capitalTotal.toNumber())).toFormat(),
               },
             ]}
@@ -678,27 +785,96 @@ class Loan extends React.Component {
             header={<h3>组合贷款</h3>}
             dataSource={[
               {
-                label: '首月月供(元)',
-                value: toFixed(capital.toNumber() + interest.toNumber()),
+                label: <strong>商业贷款</strong>
               },
               {
-                label: '月供本金(元)',
-                value: toFixed(capital.toNumber()),
+                label: '月供本金',
+                value: new BigNumber(toFixed(sdData.debjData.capital.toNumber())).toFormat(),
               },
               {
-                label: '首月利息(元)',
-                value: toFixed(interest.toNumber()),
+                label: '首月利息',
+                value: new BigNumber(toFixed(sdData.debjData.interest.toNumber())).toFormat(),
               },
               {
-                label: '每月递减(元)',
-                value: toFixed(diff),
+                label: '首月月供',
+                value: new BigNumber(toFixed(sdData.debjData.capital.plus(sdData.debjData.interest).toNumber())).toFormat()
               },
               {
-                label: '支付总利息(元)',
+                label: '每月递减',
+                value: new BigNumber(toFixed(sdData.debjData.diff.toNumber())).toFormat(),
+              },
+              {
+                label: '贷款合计',
+                value: new BigNumber(toFixed(amount1.toNumber())).toFormat(),
+              },
+              {
+                label: '利息合计',
+                value: new BigNumber(toFixed(sdData.debjData.interestTotal.toNumber())).toFormat(),
+              },
+              {
+                label: <strong>总还款额(本金+利息)</strong>,
+                value: new BigNumber(toFixed(sdData.debjData.capitalTotal.toNumber())).toFormat(),
+              },
+              {
+                label: <strong>公积金贷款</strong>
+              },
+              {
+                label: '月供本金',
+                value: new BigNumber(toFixed(gjjdData.debjData.capital.toNumber())).toFormat(),
+              },
+              {
+                label: '首月利息',
+                value: new BigNumber(toFixed(gjjdData.debjData.interest.toNumber())).toFormat(),
+              },
+              {
+                label: '首月月供',
+                value: new BigNumber(toFixed(gjjdData.debjData.capital.plus(gjjdData.debjData.interest).toNumber())).toFormat()
+              },
+              {
+                label: '每月递减',
+                value: new BigNumber(toFixed(gjjdData.debjData.diff.toNumber())).toFormat(),
+              },
+              {
+                label: '贷款合计',
+                value: new BigNumber(toFixed(amount2.toNumber())).toFormat(),
+              },
+              {
+                label: '利息合计',
+                value: new BigNumber(toFixed(gjjdData.debjData.interestTotal.toNumber())).toFormat(),
+              },
+              {
+                label: <strong>总还款额(本金+利息)</strong>,
+                value: new BigNumber(toFixed(gjjdData.debjData.capitalTotal.toNumber())).toFormat(),
+              },
+              {
+                label: <strong>组合贷合计</strong>
+              },
+              {
+                label: '月供本金',
+                value: new BigNumber(toFixed(capital.toNumber())).toFormat(),
+              },
+              {
+                label: '首月利息',
+                value: new BigNumber(toFixed(interest.toNumber())).toFormat(),
+              },
+              {
+                label: '首月月供',
+                value: new BigNumber(toFixed(capital.plus(interest).toNumber())).toFormat()
+              },
+              {
+                label: '每月递减',
+                value: new BigNumber(toFixed(diff.toNumber())).toFormat(),
+              },
+              {
+                label: '贷款合计',
+                value: new BigNumber(toFixed(amount1.plus(amount2).toNumber())).toFormat(),
+              },
+              {
+                label: '利息合计',
                 value: new BigNumber(toFixed(interestTotal.toNumber())).toFormat(),
               },
               {
-                label: '总还款额(元)',
+                label: <strong>总还款额(本金+利息)</strong>,
                 value: new BigNumber(toFixed(capitalTotal.toNumber())).toFormat(),
               },
             ]}
@@ -740,13 +916,13 @@ class Loan extends React.Component {
                 align: 'right',
                 render: (value) => toFixed(new BigNumber(value).toNumber())
               },
-              {
-                title: '利息',
-                dataIndex: 'interest',
-                key: 'interest',
-                align: 'right',
-                render: (value) => toFixed(new BigNumber(value).toNumber())
-              },
+              // {
+              //   title: '利息',
+              //   dataIndex: 'interest',
+              //   key: 'interest',
+              //   align: 'right',
+              //   render: (value) => toFixed(new BigNumber(value).toNumber())
+              // },
               {
                 title: '剩余贷款',
                 dataIndex: 'amount',
@@ -841,7 +1017,7 @@ class Loan extends React.Component {
 
     return (
       <div>
-        <Collapse defaultActiveKey={['1']}>
+        {/* <Collapse defaultActiveKey={['1']}>
           <Panel header="等额本息" key="1">
             {this.renderTabPan1(this.state)}
           </Panel>
@@ -851,7 +1027,15 @@ class Loan extends React.Component {
           <Panel header="等额本金" key="2">
             {this.renderTabPan2(this.state)}
           </Panel>
-        </Collapse>
+        </Collapse> */}
+        <Tabs defaultActiveKey="1">
+          <TabPane tab="等额本息" key="1">
+            {this.renderTabPan1(this.state)}
+          </TabPane>
+          <TabPane tab="等额本金" key="2">
+            {this.renderTabPan2(this.state)}
+          </TabPane>
+        </Tabs>
         <Divider>提前还款 - 分割线</Divider>
         <Card title="提前还款">
           <div className={styles.prePayResultContent}>
@@ -897,7 +1081,15 @@ class Loan extends React.Component {
           </div>
         </Card>
         <br/>
-        <Collapse defaultActiveKey={['1']}>
+        <Tabs defaultActiveKey="1">
+          <TabPane tab="等额本息" key="1">
+            {this.renderTabPan1(prePayParams)}
+          </TabPane>
+          <TabPane tab="等额本金" key="2">
+            {this.renderTabPan2(prePayParams)}
+          </TabPane>
+        </Tabs>
+        {/* <Collapse defaultActiveKey={['1']}>
           <Panel header="等额本息" key="1">
             {this.renderTabPan1(prePayParams)}
           </Panel>
@@ -907,7 +1099,7 @@ class Loan extends React.Component {
           <Panel header="等额本金" key="2">
             {this.renderTabPan2(prePayParams)}
           </Panel>
-        </Collapse>
+        </Collapse> */}
       </div>
     )
   }
