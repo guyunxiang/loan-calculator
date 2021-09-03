@@ -10,7 +10,10 @@ const WebHeader = () => {
   return (
     <div className={styles.WebHeader}>
       <div className={styles.WebHeader__wrap}>
-        <Link to="/">尘飞扬</Link>
+        <h2>
+          <a href="https://guyunxiang.cc/">尘飞扬</a>
+        </h2>
+        <Link to="/">首页</Link>
       </div>
       <div className={styles.WebHeader__wrap}>
         <Menu>
