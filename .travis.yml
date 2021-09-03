@@ -2,12 +2,15 @@ language: node_js
 node_js:
   - 14 # use nodejs v14 LTS
 os: linux
-cache: yarn
+cache:
+  yarn: true
+  directories:
+    - node_modules
 branches:
   only:
     - master # build master branch only
 script:
-  - hexo generate # generate static files
+  - yarn build
 deploy:
   provider: pages
   token: $GH_TOKEN
