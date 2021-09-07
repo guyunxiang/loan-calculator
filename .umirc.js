@@ -4,6 +4,7 @@ const path = require('path');
 export default {
   treeShaking: true,
   hash: true,
+  history: 'hash',
   outputPath: 'docs',
   base: '/loan-calculator',
   publicPath: '/loan-calculator/',
