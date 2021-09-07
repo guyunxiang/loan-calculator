@@ -6,7 +6,7 @@ export default {
   hash: true,
   history: 'hash',
   outputPath: 'docs',
-  base: '/loan-calculator',
+  base: '/',
   publicPath: '/loan-calculator/',
 
   alias: {
