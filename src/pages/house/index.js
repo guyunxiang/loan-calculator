@@ -13,7 +13,7 @@ import {
   Table,
   Tabs,
   Divider,
-  Collapse,
+  // Collapse,
   Empty,
 } from 'antd';
 import BigNumber from 'bignumber.js';
