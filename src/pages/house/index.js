@@ -1155,7 +1155,7 @@ class Loan extends React.Component {
                       }
                     }
                   ],
-                  initialValue: +DEFAULTVALUES.amount1,
+                  initialValue: +DEFAULTVALUES.amount1 || '',
                 })(
                   <Input
                     type="number"
@@ -1183,7 +1183,7 @@ class Loan extends React.Component {
                       }
                     }
                   ],
-                  initialValue: +DEFAULTVALUES.amount2,
+                  initialValue: +DEFAULTVALUES.amount2 || '',
                 })(
                   <Input
                     type="number"
@@ -1213,7 +1213,7 @@ class Loan extends React.Component {
                   }
                 }
               ],
-              initialValue: +DEFAULTVALUES.date,
+              initialValue: +DEFAULTVALUES.date || 30,
             })(
               <Input
                 type="number"
