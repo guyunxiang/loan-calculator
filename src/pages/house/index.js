@@ -961,7 +961,7 @@ class Loan extends React.Component {
 
   // 渲染计算结果
   renderResult() {
-    const { Panel } = Collapse;
+    // const { Panel } = Collapse;
     const {
       amount1,
       amount2,
