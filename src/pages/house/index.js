@@ -779,6 +779,11 @@ class Loan extends React.Component {
         });
       }
 
+      const isWap = document.body.clientWidth <= 768;
+      const tableProps = {};
+      if (isWap) {
+        tableProps.scroll = { x: 600 }
+      }
       return (
         <div>
           <List
@@ -933,6 +938,7 @@ class Loan extends React.Component {
             ]}
             rowKey="date"
             dataSource={list}
+            {...tableProps}
           />
         </div>
       )
@@ -1154,6 +1160,7 @@ class Loan extends React.Component {
                   <Input
                     type="number"
                     addonAfter="万元"
+                    step={0.1}
                   />
                 )
               }
@@ -1181,6 +1188,7 @@ class Loan extends React.Component {
                   <Input
                     type="number"
                     addonAfter="万元"
+                    step={0.1}
                   />
                 )
               }
@@ -1197,6 +1205,8 @@ class Loan extends React.Component {
                       callback('请输入贷款年限');
                     } else if (`${value}`.indexOf('.') > -1){
                       callback('请输入整数!');
+                    } else if (+value > 30){
+                      callback('最长 30 年!');
                     } else {
                       callback();
                     }
@@ -1208,6 +1218,8 @@ class Loan extends React.Component {
               <Input
                 type="number"
                 addonAfter="年数"
+                max={30}
+                step={1}
               />
             )
           }
